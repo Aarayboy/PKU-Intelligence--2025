@@ -1,1 +1,1 @@
-# -IntelligentPKU--2025-
+# PKU-Intelligence--2025
