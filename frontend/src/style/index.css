@@ -3,3 +3,11 @@
 @theme {
     --color-pkured: #7E0111;
 }
+
+.active {
+  @apply bg-pkured text-white shadow-lg transform scale-105;
+}
+
+.inactive {
+  @apply bg-white/80 text-gray-600 hover:bg-white hover:text-pkured hover:shadow-md;
+}
