@@ -26,7 +26,7 @@ const tabsName = {
 
 </script>
 <template>
-  <div className="max-w-7xl mx-auto px-10 py-4">
+  <div class="max-w-7xl mx-auto px-10 py-4">
     <div class="flex justify-between items-center">
       <div class="flex gap-4">
         <button v-for="(_, tab) in tabs" :key="tab"
