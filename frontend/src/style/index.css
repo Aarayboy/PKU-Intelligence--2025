@@ -1,5 +1,27 @@
 @import "tailwindcss";
 
 @theme {
-    --color-pkured: #7E0111;
+  --color-pkured: #7e0111;
+  --color-primary: #4f46e5;
+  --color-secondary: #7c3aed;
+  --color-neutral-100: #f3f4f6;
+  --color-neutral-200: #e5e7eb;
+  --color-neutral-300: #d1d5db;
+  --color-neutral-400: #9ca3af;
+  --color-neutral-500: #6b7280;
+  --color-neutral-600: #4b5563;
+  --color-neutral-700: #374151;
+  --color-neutral-800: #1f2937;
+  --color-neutral-900: #111827;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+}
+
+.active {
+  @apply bg-pkured text-white shadow-lg transform scale-105;
+}
+
+.inactive {
+  @apply bg-white/80 text-gray-600 hover:bg-white hover:text-pkured hover:shadow-md;
 }
