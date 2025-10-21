@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, onMounted } from 'vue';
+import { ref, reactive, computed, onMounted, provide, readonly } from 'vue';
 
 import Banner from './component/Banner.vue';
 import NavAndMain from './component/NavAndMain.vue';
@@ -41,6 +41,8 @@ const notificationData = ref({
 
 // 用户数据（使用本地模拟数据，不从接口获取）
 const userData = reactive(new UserData());
+
+provide('userData', readonly(userData));
 
 // 本地模拟数据
 userData.courses.splice(0, userData.courses.length,

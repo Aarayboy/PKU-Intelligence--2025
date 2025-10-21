@@ -2,8 +2,8 @@
 </script>
 
 <template>
-  课表界面
+  <div id="courses-component">
+    课表页面
+  </div>
 </template>
-
-<style scoped>
-</style>
+<style scoped></style>
