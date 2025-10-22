@@ -176,7 +176,7 @@ const resetForm = () => {
                     </select>
                     <div class="relative">
                         <i
-                            class="fa fa-chevron-down absolute right-4 top-[-38px] text-neutral-400 pointer-events-none"></i>
+                            class="fa fa-chevron-down absolute right-4 top-[-35px] text-neutral-400 pointer-events-none"></i>
                     </div>
                 </div>
                 <!-- 标签输入 -->
