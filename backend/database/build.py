@@ -1,4 +1,4 @@
-# build.py - 数据库构建脚本
+# build.py - 数据库创建脚本
 import sqlite3
 import json
 import os
