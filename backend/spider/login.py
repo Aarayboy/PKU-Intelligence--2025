@@ -7,8 +7,8 @@ import time
 
 # ======================= 【TODO: 你的凭证和平台URL】 =======================
 # 请替换为你的真实信息
-PKU_USERNAME = "your_studentID" 
-PKU_PASSWORD = "your_password"
+PKU_USERNAME = "username" 
+PKU_PASSWORD = "password"
 # 课程平台首页，从这里开始点击登录
 COURSE_BASE_URL = "https://course.pku.edu.cn/" 
 # 登录成功后跳转的页面URL特征，用于等待

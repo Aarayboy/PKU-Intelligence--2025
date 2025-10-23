@@ -1,104 +1,164 @@
+import time
 import requests
 import os
 from urllib.parse import urljoin, urlparse
+from bs4 import BeautifulSoup
 import login
 
 DOWNLOAD_DIR = 'downloads'
-if not os.path.exists(DOWNLOAD_DIR): # 确保 downloads 文件夹存在
+if not os.path.exists(DOWNLOAD_DIR):
     os.makedirs(DOWNLOAD_DIR)
 
-def get_filename_from_url(url):
-    """从URL中提取文件名"""
-    path = urlparse(url).path
-    return os.path.basename(path) # 取路径最后一段作为文件名
+def get_filename_from_response(response, fallback_url):
+    
+    """从响应头或URL提取真实文件名"""
+    cd = response.headers.get('Content-Disposition', '')
+    filename = None
+
+    if 'filename=' in cd:
+        import re
+        match = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', cd)
+        if match:
+            filename = match.group(1)
+            filename = requests.utils.unquote(filename)  # 解码中文名
+
+    if not filename:
+        filename = os.path.basename(urlparse(fallback_url).path)
+
+    # 如果没有扩展名，尝试根据 Content-Type 推断
+    if not os.path.splitext(filename)[1]:
+        content_type = response.headers.get("Content-Type", "").lower()
+        if "pdf" in content_type:
+            filename += ".pdf"
+        elif "word" in content_type:
+            filename += ".docx"
+        elif "powerpoint" in content_type:
+            filename += ".pptx"
+        else:
+            filename += ".bin"
+
+    return filename
+
+
+def ensure_unique_filename(filename):
+    """若重名则自动加编号"""
+    base, ext = os.path.splitext(filename)
+    counter = 1
+    while os.path.exists(os.path.join(DOWNLOAD_DIR, filename)):
+        filename = f"{base}_{counter}{ext}"
+        counter += 1
+    return filename
+
 
 def download_file(file_url, session):
     """下载单个文件到 downloads 文件夹"""
     try:
-        # 使用会话(session)发起请求，这在后续处理登录时很有用
-        response = session.get(file_url, stream=True) # 发起 HTTP 请求，流式下载
-        response.raise_for_status() # 如果请求失败 (相应状态不是200), 则抛出异常
+        response = session.get(file_url, stream=True)
+        response.raise_for_status()
 
-        # 从URL中获取文件名
-        filename = get_filename_from_url(file_url)
-        if not filename:
-            filename = 'downloaded_file.unknown' # 未知文件名
+        filename = get_filename_from_response(response, file_url)
+        filename = ensure_unique_filename(filename)
+        save_path = os.path.join(DOWNLOAD_DIR, filename)
 
-        save_path = os.path.join(DOWNLOAD_DIR, filename) # 构建保存路径
-
-        # 以二进制写模式打开文件，分块写入
         with open(save_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
-        
+
         print(f"文件下载成功: {save_path}")
         return save_path
-    except requests.exceptions.RequestException as e:
+    except Exception as e:
         print(f"下载文件失败 {file_url}: {e}")
         return None
 
-# def start_spidering():
-#     """
-#     爬虫主函数
-#     演示函数。没有爬取北大网站，而是下载一个公开的示例PPT。真正的北大教学网爬取需要复杂的登录认证
-#     """
-    
-#     # --- 演示代码开始 ---
-#     # 使用一个普通的 session，并假装我们已经“登录”
-#     s = requests.Session()
-#     s.headers.update({
-#         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-#     })
-
-#     # 这是一个公开的示例PPTX文件URL，用于测试下载功能
-#     # (来源: https://www.slidescarnival.com/ )
-#     PPT_EXAMPLE_URL = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-
-#     print(f"开始模拟下载: {PPT_EXAMPLE_URL}")
-    
-#     # 模拟“解析”到了这个URL，然后下载它
-#     downloaded_files = []
-    
-#     # 在真实的爬虫中，你会在这里使用 BeautifulSoup 解析 HTML
-#     # soup = BeautifulSoup(page_html, 'html.parser')
-#     # ppt_links = soup.find_all('a', href=lambda href: href and (href.endswith('.ppt') or href.endswith('.pptx')))
-#     # for link in ppt_links:
-#     #     file_url = urljoin(COURSE_PAGE_URL, link['href'])
-#     #     saved_path = download_file(file_url, s)
-#     #     if saved_path:
-#     #         downloaded_files.append(saved_path)
-
-#     # 仅用于演示
-#     saved_path = download_file(PPT_EXAMPLE_URL, s)
-#     if saved_path:
-#         downloaded_files.append(saved_path)
-#     # --- 演示代码结束 ---
-
-#     return downloaded_files
-
 
 def start_spidering():
+    """主函数：访问页面 → 收集文件链接 → 下载前10个"""
     downloaded_files = []
 
-    # 1. 调用新的登录函数获取 Session
     s = login.pku_login_and_get_session(login.PKU_USERNAME, login.PKU_PASSWORD, login.COURSE_BASE_URL)
-
     if s is None:
-        print("!!! 登录失败，爬虫终止 !!!")
+        print(" 登录失败，爬虫终止")
         return downloaded_files
 
-    # 2. 设置 User-Agent (使用登录后的 Session)
     s.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0 Safari/537.36'
     })
 
-    # 3. **下一步：访问课程页面，开始解析**
-    print(f"-> 访问课程主页: {login.COURSE_BASE_URL}")
-    
-    try:
-        pass
-        
-    except requests.exceptions.RequestException as e:
-        print(f"访问课程主页时发生错误: {e}")
-        
+    course_pages = [
+        "https://course.pku.edu.cn/webapps/portal/execute/tabs/tabAction?tab_tab_group_id=_1_1",
+        "https://course.pku.edu.cn/webapps/blackboard/content/listContent.jsp?course_id=_86236_1&content_id=_1421420_1",
+        "https://course.pku.edu.cn/webapps/blackboard/content/listContent.jsp?course_id=_86236_1&content_id=_1421419_1&mode=reset",
+    ]
+
+    all_file_links = []
+    allowed_exts = ('.pdf', '.docx', '.pptx')
+
+    # 第一层：访问课程页面，提取“详情页”链接
+    for page_url in course_pages:
+        print(f"\n 正在访问课程页面: {page_url}")
+        try:
+            resp = s.get(page_url)
+            resp.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            print(f" 访问失败: {e}")
+            continue
+
+        soup = BeautifulSoup(resp.text, 'html.parser')
+        mid_links = []
+
+        for a in soup.find_all('a', href=True):
+            href = a['href']
+            if 'content' in href and 'listContent.jsp' not in href:
+                full_url = urljoin(page_url, href)
+                mid_links.append(full_url)
+
+        print(f"  发现 {len(mid_links)} 个可能的文件详情页")
+
+        # 第二层：访问详情页，提取真实文件直链
+        for mid_url in mid_links:
+            if len(all_file_links) >= 10:  #  限制最多收集10个
+                break
+            try:
+                sub_resp = s.get(mid_url, stream=True)
+                sub_resp.raise_for_status()
+                content_type = sub_resp.headers.get("Content-Type", "").lower()
+
+                # 若直接返回文件，则加入下载队列
+                if any(ft in content_type for ft in ["pdf", "officedocument", "ms-powerpoint", "msword"]):
+                    if mid_url not in all_file_links:
+                        all_file_links.append(mid_url)
+                        print(f"  检测到直接文件: {mid_url}")
+                    continue
+
+                # 否则继续解析 HTML
+                sub_soup = BeautifulSoup(sub_resp.text, 'html.parser')
+                for a2 in sub_soup.find_all('a', href=True):
+                    href2 = a2['href']
+                    if 'bbcswebdav' in href2 and href2.lower().endswith(allowed_exts):
+                        full_url = urljoin(mid_url, href2)
+                        if full_url not in all_file_links:
+                            all_file_links.append(full_url)
+                            print(f" 找到文件: {full_url}")
+                    if len(all_file_links) >= 10:
+                        break
+                time.sleep(0.5)
+
+            except Exception as e:
+                print(f"  访问 {mid_url} 时出错: {e}")
+
+    print(f"\n🔍 共发现 {len(all_file_links)} 个文件（限制10个）")
+
+    # 下载阶段
+    for i, file_url in enumerate(all_file_links, start=1):
+        print(f"\n [{i}/{len(all_file_links)}] 正在下载: {file_url}")
+        saved_path = download_file(file_url, s)
+        if saved_path:
+            downloaded_files.append(saved_path)
+        time.sleep(1)
+
+    print(f"\ 下载任务完成，共下载 {len(downloaded_files)} 个文件。")
     return downloaded_files
+
+
+if __name__ == "__main__":
+    start_spidering()
