@@ -6,7 +6,7 @@ import Links from './utils/Links.vue';
 import Tasks from './utils/Tasks.vue';
 import Courses from './utils/Courses.vue';
 
-defineEmits(['NewNote', 'NewCourse'])
+defineEmits(['NewNote', 'NewCourse', 'update-course-tags'])
 
 const currentTab = ref('Note');
 
@@ -51,7 +51,7 @@ const tabsName = {
 
       </div>
     </div>
-    <component :is=tabs[currentTab]> </component>
+    <component :is="tabs[currentTab]" @update-course-tags="(payload) => $emit('update-course-tags', payload)"> </component>
   </div>
 </template>
 

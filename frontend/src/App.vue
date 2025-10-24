@@ -215,6 +215,14 @@ const handleLogout = () => {
   setNotification('已退出登录', '欢迎再次使用', true);
 };
 
+// 外部组件触发：更新课程标签
+const handleUpdateCourseTags = ({ index, tags }) => {
+  if (!Number.isInteger(index) || index < 0 || index >= userData.courses.length) return;
+  // 在 App.vue 内修改 reactive 的 userData（provide 时对外只读）
+  userData.courses[index].tags = Array.isArray(tags) ? tags : [];
+  setNotification('标签已更新', '课程标签已保存', true);
+};
+
 // 打开登录模态框
 const openLoginModal = () => {
   showLoginModal.value = true;
@@ -296,7 +304,7 @@ const setNotification = (title, message, success = true) => {
                     userData.courses.push(new MyCourse(note.lessonName, [], [new MyNote(note.name, note.file, note.lessonName)]));
                   }
                 }"/>
-    <NavAndMain @NewCourse="showNewCourseModal = true" @NewNote="showNewNoteModal = true"/>
+  <NavAndMain @NewCourse="showNewCourseModal = true" @NewNote="showNewNoteModal = true" @update-course-tags="handleUpdateCourseTags"/>
   </div>
 
   <!-- 未登录状态显示登录界面 -->
