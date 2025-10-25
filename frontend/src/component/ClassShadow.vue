@@ -1,7 +1,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 
-const props = defineProps(['visible']);
+const props = defineProps(['visible', 'userId']);
 const emit = defineEmits(['close', 'showNotification', 'course-saved']);
 
 // 表单数据
@@ -39,26 +39,12 @@ const removeTag = (index) => {
 // 上传中的状态，避免重复提交
 const isSubmitting = ref(false);
 
-// 上传课程到服务器（使用 fetch + FormData）
-const upToServer = async (data) => {
-    const form = new FormData();
-    form.append('title', data?.title ?? '');
-    form.append('tags', JSON.stringify(data?.tags ?? []));
+import api from '../api';
 
-    const res = await fetch('https://example.com/upload', {
-        method: 'POST',
-        body: form,
-    });
-    if (!res.ok) {
-        let detail = '';
-        try { detail = await res.text(); } catch {}
-        throw new Error(`上传失败(${res.status}): ${detail || res.statusText}`);
-    }
-    try {
-        return await res.json();
-    } catch {
-        return true;
-    }
+// 使用集中化的 API 模块创建课程
+// payload: { title, tags }
+const upToServer = async (data) => {
+    return api.createCourse({ title: data?.title ?? '', tags: data?.tags ?? [], userId: props.userId });
 };
 
 // 提交表单
@@ -74,9 +60,11 @@ const handleSubmit = async () => {
         tags: [...tags.value],
     };
     try {
-        // await upToServer(payload); 先不上传
-        // 通知父组件新增课程
-        emit('course-saved', { name: payload.title, tags: payload.tags });
+        // 上传到后端并使用后端返回的数据
+        const res = await upToServer(payload);
+        const created = res?.course || res;
+        // 通知父组件新增课程，优先使用后端返回的数据字段
+        emit('course-saved', { name: created?.name || payload.title, tags: created?.tags || payload.tags });
         emit('showNotification', '成功', '课程已创建！', true);
         closeWindow();
     } catch (err) {

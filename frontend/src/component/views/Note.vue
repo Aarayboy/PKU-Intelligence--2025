@@ -26,7 +26,7 @@ const userData = inject('userData'); // readonly user data from App.vue
         <div class="">
 
         </div>
-        <div class="notes-list hidden max-h-48 overflow-y-auto">
+        <div class="notes-list max-h-48 overflow-y-auto">
           <ul>
             <li v-for="(note, noteIndex) in course.myNotes" :key="noteIndex" class="mb-1">
               {{ note.name }}

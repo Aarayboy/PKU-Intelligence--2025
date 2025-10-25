@@ -1,0 +1,280 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "email": "admin@example.com",
+      "password": "123456",
+      "courses": [
+        {
+          "id": 1,
+          "name": "高等数学",
+          "tags": [
+            "基础",
+            "必修"
+          ],
+          "myNotes": [
+            {
+              "name": "极限与连续笔记",
+              "file": null,
+              "lessonName": "高等数学"
+            },
+            {
+              "name": "导数与微分整理",
+              "file": null,
+              "lessonName": "高等数学"
+            }
+          ]
+        },
+        {
+          "id": 2,
+          "name": "数据结构",
+          "tags": [
+            "编程",
+            "必修"
+          ],
+          "myNotes": [
+            {
+              "name": "栈和队列总结",
+              "file": null,
+              "lessonName": "数据结构"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "操作系统",
+          "tags": [
+            "系统"
+          ],
+          "myNotes": []
+        },
+        {
+          "id": 6,
+          "name": "软工",
+          "tags": [
+            "12313",
+            "1234"
+          ],
+          "myNotes": []
+        },
+        {
+          "id": 7,
+          "name": "软工",
+          "tags": [
+            "adad"
+          ],
+          "myNotes": []
+        },
+        {
+          "id": 2,
+          "name": "软工",
+          "tags": [],
+          "myNotes": [
+            {
+              "name": "用况图",
+              "file": null,
+              "lessonName": "软工"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "username": "user1",
+      "email": "user1@example.com",
+      "password": "123456",
+      "courses": [
+        {
+          "id": 4,
+          "name": "英语",
+          "tags": [
+            "语言",
+            "必修"
+          ],
+          "myNotes": [
+            {
+              "name": "语法总结",
+              "file": null,
+              "lessonName": "英语"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "name": "计算机基础",
+          "tags": [
+            "编程"
+          ],
+          "myNotes": []
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "username": "zys",
+      "email": "test1@pku.edu.cn",
+      "password": "123456",
+      "courses": [
+        {
+          "id": 8,
+          "name": "软工",
+          "tags": [
+            "313"
+          ],
+          "myNotes": [
+            {
+              "name": "用况图",
+              "file": null,
+              "lessonName": "软工"
+            }
+          ]
+        },
+        {
+          "id": 1,
+          "name": "OS",
+          "tags": [],
+          "myNotes": [
+            {
+              "name": "adwaqrq",
+              "file": null,
+              "lessonName": "OS"
+            }
+          ]
+        },
+        {
+          "id": 3,
+          "name": "DSA",
+          "tags": [
+            "balabala"
+          ],
+          "myNotes": []
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "username": "zys1",
+      "email": "test2@pku.edu.cn",
+      "password": "123456",
+      "courses": [
+        {
+          "id": 4,
+          "name": "软工",
+          "tags": [
+            "666"
+          ],
+          "myNotes": [
+            {
+              "name": "用况图",
+              "file": null,
+              "lessonName": "软工"
+            }
+          ]
+        },
+        {
+          "id": 5,
+          "name": "DSA",
+          "tags": [],
+          "myNotes": []
+        }
+      ]
+    }
+  ],
+  "courses": [
+    {
+      "id": 1,
+      "name": "OS",
+      "tags": [],
+      "myNotes": [
+        {
+          "name": "用况图",
+          "file": null,
+          "lessonName": "OS"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "软工",
+      "tags": [],
+      "myNotes": [
+        {
+          "name": "用况图",
+          "file": null,
+          "lessonName": "软工"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "DSA",
+      "tags": [
+        "balabala"
+      ],
+      "myNotes": []
+    },
+    {
+      "id": 4,
+      "name": "软工",
+      "tags": [
+        "666"
+      ],
+      "myNotes": []
+    },
+    {
+      "id": 5,
+      "name": "DSA",
+      "tags": [],
+      "myNotes": []
+    }
+  ],
+  "notes": [
+    {
+      "id": 1,
+      "name": "用况图",
+      "lessonName": "OS",
+      "tags": [
+        "sda"
+      ],
+      "files": []
+    },
+    {
+      "id": 2,
+      "name": "用况图",
+      "lessonName": "软工",
+      "tags": [
+        "sda"
+      ],
+      "files": []
+    },
+    {
+      "id": 3,
+      "name": "用况图",
+      "lessonName": "软工",
+      "tags": [
+        "213123141"
+      ],
+      "files": []
+    },
+    {
+      "id": 4,
+      "name": "adwaqrq",
+      "lessonName": "OS",
+      "tags": [
+        "afwqf"
+      ],
+      "files": []
+    },
+    {
+      "id": 5,
+      "name": "用况图",
+      "lessonName": "软工",
+      "tags": [
+        "好难啊"
+      ],
+      "files": []
+    }
+  ]
+}

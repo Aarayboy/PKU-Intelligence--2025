@@ -1,10 +1,10 @@
 <script setup>
 import { ref } from 'vue';
 
-import Note from './utils/Note.vue';
-import Links from './utils/Links.vue';
-import Tasks from './utils/Tasks.vue';
-import Courses from './utils/Courses.vue';
+import Note from './views/Note.vue';
+import Links from './views/Links.vue';
+import Tasks from './views/Tasks.vue';
+import Courses from './views/Courses.vue';
 
 defineEmits(['NewNote', 'NewCourse'])
 

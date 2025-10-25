@@ -1,5 +1,5 @@
 <script setup>
-const props = defineProps(["visible", "lessonLists"]);
+const props = defineProps(["visible", "lessonLists", "userId"]);
 const emit = defineEmits(['close', 'showNotification', 'note-saved']);
 import { ref, reactive, toRef, watch } from 'vue';
 
@@ -66,33 +66,19 @@ const removeFile = (index) => {
     uploadedFiles.value.splice(index, 1);
 };
 
-// 实际上传到服务器（使用 fetch + FormData）
+import api from '../api';
+
+// 使用集中化的 API 模块上传到服务器（可被替换为 mock 或不同后端地址）
+// payload: { title, tags, files: File[], lessonName }
 const upToServer = async (data) => {
-    const form = new FormData();
-    form.append('title', data?.title ?? '');
-    form.append('tags', JSON.stringify(data?.tags ?? []));
-    (data?.files ?? []).forEach((file) => {
-        // 后端通常按字段名 files 接收多文件
-        form.append('files', file, file.name);
+    // 调用统一的 uploadNote，并传入 userId（如果有）
+    return api.uploadNote({
+        title: data?.title ?? '',
+        tags: data?.tags ?? [],
+        files: data?.files ?? [],
+        lessonName: data?.lessonName ?? '',
+        userId: props.userId,
     });
-
-    const res = await fetch('https://example.com/upload', {
-        method: 'POST',
-        body: form,
-    });
-
-    if (!res.ok) {
-        let detail = '';
-        try { detail = await res.text(); } catch { }
-        throw new Error(`上传失败(${res.status}): ${detail || res.statusText}`);
-    }
-
-    // 若返回不是 JSON，不影响上层流程
-    try {
-        return await res.json();
-    } catch {
-        return true;
-    }
 };
 
 // 上传中的状态，避免重复提交
@@ -117,13 +103,16 @@ const handleSubmit = async () => {
     };
 
     try {
-        // await upToServer(completeData); 暂时不上传
-        console.log('保存笔记:', completeData);
-        // 通知父组件新增的笔记（只传必要字段）
+        // 上传到后端并使用后端返回的数据
+        const res = await upToServer(completeData);
+        const saved = res?.note || res;
+        const savedFiles = res?.saved_files || [];
+        console.log('保存笔记:', saved);
+        // 通知父组件新增的笔记，优先使用后端返回的信息
         emit('note-saved', {
-            name: formData.title,
-            file: uploadedFiles.value[0] ? uploadedFiles.value[0].name : null,
-            lessonName: selectedLesson.value,
+            name: saved?.name || formData.title,
+            file: (savedFiles && savedFiles.length) ? savedFiles[0] : (uploadedFiles.value[0] ? uploadedFiles.value[0].name : null),
+            lessonName: saved?.lessonName || selectedLesson.value,
         });
         emit('showNotification', '成功', '笔记已保存成功！', true);
         closeWindow();
