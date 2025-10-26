@@ -18,7 +18,12 @@ class MyCourse {
 }
 
 class UserData {
-  constructor(courses = []) {
+  // accept an options object so we can keep backward compatibility and also
+  // assign any extra properties that backend may return (e.g. avatar, bio, role)
+  constructor({ courses = [], username = '', userId = null, email = ''} = {}) {
+    this.username = username;
+    this.userId = userId;
+    this.email = email;
     this.courses = courses;
   }
 }
@@ -26,7 +31,10 @@ class UserData {
 const userData = reactive(new UserData());
 
 function mapToUserData(payload) {
-  const courses = (payload?.courses ?? payload?.data?.courses ?? [])
+  // payload may be the response body or an object like { data: { ... } }
+  const body = payload?.data ?? payload ?? {};
+
+  const courses = (body?.courses ?? [])
     .map((c) => new MyCourse(
       c?.name ?? '',
       Array.isArray(c?.tags) ? c.tags : [],
@@ -36,7 +44,30 @@ function mapToUserData(payload) {
         n?.lessonName ?? c?.name ?? ''
       ))
     ));
-  return new UserData(courses);
+
+  // Build a user data object that preserves any extra fields from backend
+  const userDataObj = {
+    courses,
+    username: body?.username ?? body?.name ?? '',
+    userId: body?.userId ?? body?.id ?? null,
+    email: body?.email ?? '',
+  };
+
+  // copy any other top-level properties from body into the userDataObj
+  // (this ensures the three new properties you added will be retained)
+  Object.keys(body).forEach((k) => {
+    if (!(k in userDataObj)) {
+      userDataObj[k] = body[k];
+    }
+  });
+
+  return new UserData(userDataObj);
+}
+
+function ensureUserData(payload) {
+  // If it's already an instance, return as-is. Otherwise map to UserData.
+  if (payload instanceof UserData) return payload;
+  return mapToUserData(payload);
 }
 
 async function loadUserData(userId, setNotification) {
@@ -50,6 +81,9 @@ async function loadUserData(userId, setNotification) {
     const res = await api.getUserData(userId);
     const mapped = mapToUserData(res);
     userData.courses.splice(0, userData.courses.length, ...mapped.courses);
+    userData.username = mapped.username;
+    userData.userId = mapped.userId;
+    userData.email = mapped.email;
     return userData;
   } catch (err) {
     if (typeof setNotification === 'function') {
@@ -64,3 +98,6 @@ export function useUserData() {
 }
 
 export default useUserData;
+
+// named exports so components can import and ensure they only pass UserData
+export { UserData, mapToUserData, ensureUserData };

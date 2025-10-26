@@ -66,6 +66,16 @@ function handleLogout() {
   setNotification('已退出登录', '欢迎再次使用', true);
 }
 
+function switchToRegister() {
+  showLoginModal.value = false;
+  showRegisterModal.value = true;
+}
+
+function switchToLogin() {
+  showRegisterModal.value = false;
+  showLoginModal.value = true;
+}
+
 </script>
 
 <template>
@@ -95,13 +105,13 @@ function handleLogout() {
                 @showNotification="setNotification"
                 @course-saved="(course) => {
                   // 刷新后端数据以保持一致性
-                  loadUserData();
+                  loadUserData(currentUser.id);
                 }"/>
     <NoteShadow :visible="showNewNoteModal" :lesson-lists="userData.courses.map(c => c.name)" :user-id="currentUser?.id"
                 @close="() => showNewNoteModal = false" @showNotification="setNotification"
                 @note-saved="(note) => {
                   // 上传笔记后从后端重新加载用户数据以保持一致
-                  loadUserData();
+                  loadUserData(currentUser.id);
                 }"/>
     <NavAndMain @NewCourse="showNewCourseModal = true" @NewNote="showNewNoteModal = true"/>
   </div>

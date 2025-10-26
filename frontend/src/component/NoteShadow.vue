@@ -12,8 +12,9 @@ const formData = reactive({
 const tags = ref([]);
 const newTag = ref('');
 
-// 上传文件相关
+// 上传文件相关（仅允许单文件）
 const uploadedFiles = ref([]);
+const fileError = ref('');
 // 选择的课程
 const selectedLesson = ref('');
 
@@ -53,12 +54,25 @@ const removeTag = (index) => {
 
 // 处理文件上传
 const handleFileUpload = (e) => {
-    const files = Array.from(e.target.files);
-    files.forEach(file => {
-        uploadedFiles.value.push(file);
-    });
-    // 清空input值，允许重复上传同一文件
-    e.target.value = '';
+        fileError.value = '';
+        const files = Array.from(e.target.files || []);
+        if (!files.length) {
+            e.target.value = '';
+            return;
+        }
+        const file = files[0];
+        // basic size check (10MB)
+        const MAX = 10 * 1024 * 1024;
+        if (file.size > MAX) {
+            fileError.value = '文件大小不能超过 10MB';
+            emit('showNotification', '文件过大', fileError.value, false);
+            e.target.value = '';
+            return;
+        }
+        // replace any existing file (only single file allowed)
+        uploadedFiles.value.splice(0, uploadedFiles.value.length, file);
+        // 清空input值，允许重复上传同一文件
+        e.target.value = '';
 };
 
 // 删除已上传文件
@@ -88,10 +102,21 @@ const isSubmitting = ref(false);
 const handleSubmit = async () => {
     if (isSubmitting.value) return;
 
-    if (!selectedLesson.value) {
-        emit('showNotification', '请选择所属课程', '请先选择一个课程后再保存笔记', false);
-        return;
-    }
+        if (!selectedLesson.value) {
+                emit('showNotification', '请选择所属课程', '请先选择一个课程后再保存笔记', false);
+                return;
+        }
+        if (uploadedFiles.value.length > 1) {
+                emit('showNotification', '文件数量错误', '每个笔记最多只能包含一个文件', false);
+                return;
+        }
+        if (uploadedFiles.value.length === 1) {
+            // ensure userId exists before uploading file
+            if (!props.userId) {
+                emit('showNotification', '缺少用户信息', '请先登录后再上传文件', false);
+                return;
+            }
+        }
     isSubmitting.value = true;
 
     // 构建完整的表单数据，包括标签和文件
@@ -198,8 +223,9 @@ const resetForm = () => {
                         <label
                             class="inline-block px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-custom cursor-pointer">
                             <i class="fa fa-plus mr-1"></i> 选择文件
-                            <input type="file" multiple class="hidden" @change="handleFileUpload">
+                            <input type="file" class="hidden" @change="handleFileUpload">
                         </label>
+                        <p v-if="fileError" class="mt-2 text-sm text-danger">{{ fileError }}</p>
                     </div>
                     <div v-if="uploadedFiles.length">
                         <p class="mt-2 text-sm text-neutral-600">已上传文件:</p>
