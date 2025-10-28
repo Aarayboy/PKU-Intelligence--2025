@@ -121,7 +121,7 @@ function CloseFileView() {
           @course-saved="
             (course) => {
               // 刷新后端数据以保持一致性
-              loadUserData();
+              loadUserData(currentUser?.id);
             }
           "
         />
@@ -134,7 +134,7 @@ function CloseFileView() {
           @note-saved="
             (note) => {
               // 上传笔记后从后端重新加载用户数据以保持一致
-              loadUserData();
+              loadUserData(currentUser?.id);
             }
           "
         />
@@ -173,6 +173,9 @@ function CloseFileView() {
             </svg>
           </button>
         </div>
+
+
+
 
         <iframe
           :src="filepath"

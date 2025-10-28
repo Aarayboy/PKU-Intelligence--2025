@@ -1,5 +1,6 @@
 <script setup>
 import { Edit } from "lucide-react";
+import api from "@/api";
 import { ref, reactive, inject } from "vue";
 const userData = inject("userData"); // readonly user data from App.vue
 const fileview = inject("fileview");
@@ -26,12 +27,24 @@ function DisplayNotesList(index) {
   }
 }
 
-function DisplayNoteFile(coursename, notename) {
+async function DisplayNoteFile(coursename, notename) {
   // 查找文件路径 (保持原样，但注意查找失败时的 Type Error 风险)
   // 最佳实践应使用 ?. 可选链
-  const Filepath = userData.courses
-    .find((course) => course.name === coursename)
-    .myNotes.find((note) => note.name === notename).file;
+  // window.console.log("课程名: ", coursename);
+  // window.console.log("笔记名: ", notename);
+  // window.console.log("用户ID: ", userData.userId);
+  const Filepath = await api.getNoteFiles({ userId: userData.userId, lessonName: coursename, noteName: notename }).then(res => {
+    window.console.log("获取到的文件列表: ", res);
+    if (res && res.files && res.files.length > 0) {
+      return res.files[0].url; // 假设返回的文件对象中有 url 字段
+    } else {
+      return null;
+    }
+  }).catch(err => {
+    window.console.error("获取文件路径出错: ", err);
+    return null;
+  });
+  // window.console.log("文件路径: ", Filepath);
 
   if (Filepath) {
     // FIX: 使用 .value 访问 ref
@@ -41,6 +54,7 @@ function DisplayNoteFile(coursename, notename) {
   } else {
     window.alert("该笔记暂无文件内容");
   }
+  
 }
 
 const SearchHandler = (event) => {

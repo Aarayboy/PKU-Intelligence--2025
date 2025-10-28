@@ -16,7 +16,7 @@
           "myNotes": [
             {
               "name": "极限与连续笔记",
-              "file": "backend\\uploads\\2025作业一1014.pdf",
+              "file": "2025作业一1014.pdf",
               "lessonName": "高等数学"
             },
             {
@@ -27,6 +27,16 @@
             {
               "name": "线性代数",
               "file": null,
+              "lessonName": "高等数学"
+            },
+            {
+              "name": "aaa",
+              "file": "-.png",
+              "lessonName": "高等数学"
+            },
+            {
+              "name": "多元微分",
+              "file": "20240221144441.jpg",
               "lessonName": "高等数学"
             }
           ]
@@ -60,7 +70,6 @@
           "tags": [],
           "myNotes": []
         }
-        
       ]
     },
     {
@@ -359,6 +368,28 @@
         "wqeq"
       ],
       "files": []
+    },
+    {
+      "id": 10,
+      "name": "aaa",
+      "lessonName": "高等数学",
+      "tags": [
+        "123"
+      ],
+      "files": [
+        "-.png"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "多元微分",
+      "lessonName": "高等数学",
+      "tags": [
+        "难"
+      ],
+      "files": [
+        "20240221144441.jpg"
+      ]
     }
   ]
 }

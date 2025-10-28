@@ -82,7 +82,7 @@ async function loadUserData(userId, setNotification) {
     const mapped = mapToUserData(res);
     userData.courses.splice(0, userData.courses.length, ...mapped.courses);
     userData.username = mapped.username;
-    userData.userId = mapped.userId;
+    userData.userId = userId;
     userData.email = mapped.email;
     return userData;
   } catch (err) {

@@ -156,4 +156,7 @@ export default {
   uploadNote,
   login,
   register,
+  getNoteFileUrl,
+  getNoteFiles,
+  downloadNoteFile,
 };

@@ -4,6 +4,10 @@ from pathlib import Path
 import os
 from werkzeug.utils import secure_filename
 import storage
+import dotenv
+dotenv.load_dotenv()
+LocalHost = os.getenv('localhost')
+
 
 UPLOAD_DIR = Path(__file__).parent / 'uploads'
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
@@ -185,7 +189,7 @@ def get_note_files():
     files_info = []
     for fname in saved_files:
         # build a URL to download via the secured endpoint /notes/file
-        file_url = url_for('download_note_file', _external=False) + f"?userId={user_id}&lessonName={lessonName}&noteName={noteName}&filename={fname}"
+        file_url = f"{LocalHost}" + url_for('download_note_file', _external=False) + f"?userId={user_id}&lessonName={lessonName}&noteName={noteName}&filename={fname}"
         files_info.append({'name': fname, 'url': file_url})
 
     return jsonify({'success': True, 'files': files_info})
@@ -198,15 +202,17 @@ def download_note_file():
     lessonName = request.args.get('lessonName')
     noteName = request.args.get('noteName')
     filename = request.args.get('filename')
+    print("Download request:", user_id, lessonName, noteName, filename)
 
     if not user_id or not lessonName or not noteName or not filename:
         return jsonify({'error': 'userId, lessonName, noteName and filename are required'}), 400
 
     # verify user exists
-    user = storage.get_user(user_id)
+    user = storage.get_user(user_id)    
     if not user:
         return jsonify({'error': 'user not found'}), 404
 
+    print(user_id, lessonName, noteName, filename)
     # verify note belongs to user/course
     course = None
     for c in user.get('courses', []):
@@ -224,6 +230,7 @@ def download_note_file():
     if not note_found:
         return jsonify({'error': 'note not found in this course for user'}), 404
 
+    
     # check that filename is among saved files
     data = storage.read_data()
     saved_files = []

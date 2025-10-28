@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue';
+import { inject, ref } from 'vue';
 
 import Note from './views/Note.vue';
 import Links from './views/Links.vue';
@@ -7,6 +7,7 @@ import Tasks from './views/Tasks.vue';
 import Courses from './views/Courses.vue';
 
 defineEmits(['NewNote', 'NewCourse'])
+const fileview = inject("fileview");
 
 
 const currentTab = ref('Note');
@@ -28,7 +29,7 @@ const tabsName = {
 </script>
 <template>
   <div class="max-w-7xl mx-auto px-10 py-4">
-    <div class="flex justify-between items-center mb-4">
+    <div class="flex justify-between items-center mb-4" :class="{hidden : fileview}">
       <div class="flex gap-4">
         <button v-for="(_, tab) in tabs" :key="tab"
           class="flex items-center gap-2 px-4 py-3 rounded-lg transition-all duration-200 hover:cursor-pointer"
