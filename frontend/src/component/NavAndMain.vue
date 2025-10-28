@@ -8,6 +8,7 @@ import Courses from './views/Courses.vue';
 
 defineEmits(['NewNote', 'NewCourse'])
 
+
 const currentTab = ref('Note');
 
 const tabs = {

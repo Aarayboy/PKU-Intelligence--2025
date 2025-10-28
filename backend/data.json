@@ -16,11 +16,16 @@
           "myNotes": [
             {
               "name": "极限与连续笔记",
-              "file": null,
+              "file": "backend\\uploads\\2025作业一1014.pdf",
               "lessonName": "高等数学"
             },
             {
               "name": "导数与微分整理",
+              "file": null,
+              "lessonName": "高等数学"
+            },
+            {
+              "name": "线性代数",
               "file": null,
               "lessonName": "高等数学"
             }
@@ -50,34 +55,12 @@
           "myNotes": []
         },
         {
-          "id": 6,
-          "name": "软工",
-          "tags": [
-            "12313",
-            "1234"
-          ],
-          "myNotes": []
-        },
-        {
-          "id": 7,
-          "name": "软工",
-          "tags": [
-            "adad"
-          ],
-          "myNotes": []
-        },
-        {
-          "id": 2,
-          "name": "软工",
+          "id": 1,
+          "name": "线性代数",
           "tags": [],
-          "myNotes": [
-            {
-              "name": "用况图",
-              "file": null,
-              "lessonName": "软工"
-            }
-          ]
+          "myNotes": []
         }
+        
       ]
     },
     {
@@ -182,99 +165,23 @@
       ]
     }
   ],
-  "courses": [
-    {
-      "id": 1,
-      "name": "OS",
-      "tags": [],
-      "myNotes": [
-        {
-          "name": "用况图",
-          "file": null,
-          "lessonName": "OS"
-        }
-      ]
-    },
-    {
-      "id": 2,
-      "name": "软工",
-      "tags": [],
-      "myNotes": [
-        {
-          "name": "用况图",
-          "file": null,
-          "lessonName": "软工"
-        }
-      ]
-    },
-    {
-      "id": 3,
-      "name": "DSA",
-      "tags": [
-        "balabala"
-      ],
-      "myNotes": []
-    },
-    {
-      "id": 4,
-      "name": "软工",
-      "tags": [
-        "666"
-      ],
-      "myNotes": []
-    },
-    {
-      "id": 5,
-      "name": "DSA",
-      "tags": [],
-      "myNotes": []
-    }
-  ],
   "notes": [
     {
       "id": 1,
-      "name": "用况图",
-      "lessonName": "OS",
+      "name": "线性代数",
+      "lessonName": "高等数学",
       "tags": [
-        "sda"
+        "lk lklk"
       ],
       "files": []
-    },
+    }
+  ],
+  "courses": [
     {
-      "id": 2,
-      "name": "用况图",
-      "lessonName": "软工",
-      "tags": [
-        "sda"
-      ],
-      "files": []
-    },
-    {
-      "id": 3,
-      "name": "用况图",
-      "lessonName": "软工",
-      "tags": [
-        "213123141"
-      ],
-      "files": []
-    },
-    {
-      "id": 4,
-      "name": "adwaqrq",
-      "lessonName": "OS",
-      "tags": [
-        "afwqf"
-      ],
-      "files": []
-    },
-    {
-      "id": 5,
-      "name": "用况图",
-      "lessonName": "软工",
-      "tags": [
-        "好难啊"
-      ],
-      "files": []
+      "id": 1,
+      "name": "线性代数",
+      "tags": [],
+      "myNotes": []
     }
   ]
 }
