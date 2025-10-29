@@ -50,6 +50,22 @@ onMounted(() => {
   }
 });
 
+// 实现切换到注册模态框和登陆模态框
+const switchToRegister = () => {
+  showLoginModal.value = false;
+  // 延迟切换避免动画冲突
+  setTimeout(() => {
+    showRegisterModal.value = true;
+  }, 300);
+};
+
+const switchToLogin = () => {
+  showRegisterModal.value = false;
+  setTimeout(() => {
+    showLoginModal.value = true;
+  }, 300);
+};
+
 async function handleLogin(loginData) {
   try {
     const user = await login(loginData);
@@ -195,6 +211,7 @@ function CloseFileView() {
     v-else
     @show-login="showLoginModal = true"
     @show-register="showRegisterModal = true"
+    @login="handleLogin"
   />
 </template>
 

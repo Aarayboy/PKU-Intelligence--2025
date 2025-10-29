@@ -42,7 +42,11 @@
               placeholder="请输入密码"
               minlength="6"
             >
+            <p v-if="formData.password.length > 0 && formData.password.length < 6" class="error-text">
+              密码至少需要6个字符
+            </p>
           </div>
+
           
           <div class="form-group">
             <label for="confirmPassword">确认密码</label>
@@ -53,6 +57,9 @@
               required
               placeholder="请再次输入密码"
             >
+            <p v-if="formData.confirmPassword.length > 0 && !passwordsMatch" class="error-text">
+              两次输入的密码不匹配
+            </p>
           </div>
           
           <button type="submit" class="submit-btn" :disabled="loading || !passwordsMatch">
@@ -124,6 +131,13 @@
   </script>
   
   <style scoped>
+  .error-text {
+  color: #ff4444;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+  }
+  
   .modal-overlay {
     position: fixed;
     top: 0;
