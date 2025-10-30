@@ -30,4 +30,13 @@ coverage
 *.sln
 *.sw?
 
+*.db
+*.json
+*.sqlite
+
+uploads/
+backend/uploads/
+
+desktop.ini
+
 *.tsbuildinfo

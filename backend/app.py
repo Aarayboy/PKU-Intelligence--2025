@@ -6,11 +6,10 @@ from werkzeug.utils import secure_filename
 import storage
 import dotenv
 dotenv.load_dotenv()
-LocalHost = os.getenv('localhost')
-
-
-UPLOAD_DIR = Path(__file__).parent / 'uploads'
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+LocalHost = os.getenv('localhost') or ''
+# Resolve and ensure the base storage directory exists
+BASE_STORAGE_DIR = Path(os.getenv('storage_dir', './uploads/')).resolve()
+BASE_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 CORS(app)
@@ -55,6 +54,10 @@ def create_course():
     # optional userId to attach course to specific user
     user_id = data.get('userId') or None
     course = storage.add_course(title, tags, user_id)
+
+    if not course:
+        return jsonify({'error': 'failed to create course'}), 500
+    
     return jsonify({'success': True, 'course': course})
 
 
@@ -63,6 +66,7 @@ def upload_note():
     title = request.form.get('title') or request.values.get('title')
     lessonName = request.form.get('lessonName') or request.form.get('lesson') or request.values.get('lessonName')
     tags_raw = request.form.get('tags') or '[]'
+    user_id = request.form.get('userId') or request.values.get('userId')
     try:
         import json
         tags = json.loads(tags_raw) if isinstance(tags_raw, str) else tags_raw
@@ -73,30 +77,29 @@ def upload_note():
     # enforce at most one file per note
     if len(files) > 1:
         return jsonify({'error': '每个笔记只允许上传一个文件'}), 400
-    saved_files = []
     # require lessonName (course name) and user_id to be present
-    user_id = request.form.get('userId') or request.values.get('userId')
     if not lessonName:
         return jsonify({'error': 'lessonName (课程名) is required'}), 400
     if not user_id:
         return jsonify({'error': 'userId is required'}), 400
-    for f in files:
-        filename = secure_filename(f.filename)
-        if not filename:
-            continue
-        out_path = UPLOAD_DIR / filename
-        # if name collision, append number
-        base, ext = os.path.splitext(filename)
-        counter = 1
-        while out_path.exists():
-            filename = f"{base}-{counter}{ext}"
-            out_path = UPLOAD_DIR / filename
-            counter += 1
-        f.save(str(out_path))
-        saved_files.append(str(out_path.name))
 
-    note = storage.add_note(title or 'Untitled', lessonName, tags=tags, files=[f.filename for f in files], saved_files=saved_files, user_id=user_id)
-    return jsonify({'success': True, 'note': note, 'saved_files': saved_files})
+    # Save file (0 or 1) under BASE_STORAGE_DIR/<userId>/<lessonName>/<noteTitle>/<filename>
+    saved_filenames = []
+    if files:
+        for f in files:
+            filename = secure_filename(f.filename)
+            if not filename:
+                continue
+            note_dir = BASE_STORAGE_DIR / str(user_id) / str(lessonName) / str(title or 'Untitled')
+            note_dir.mkdir(parents=True, exist_ok=True)
+            file_path = note_dir / filename
+            f.save(str(file_path))
+            saved_filenames.append(filename)
+
+    # Record note with sanitized filenames
+    note = storage.add_note(title or 'Untitled', lessonName, tags=tags, files=saved_filenames, user_id=user_id)
+
+    return jsonify({'success': True, 'note': note, 'saved_files': saved_filenames})
 
 
 @app.route('/auth/login', methods=['POST'])
@@ -174,17 +177,14 @@ def get_note_files():
     if note_entry is None:
         return jsonify({'error': 'note not found in this course for user'}), 404
 
-    # try to find matching global note to get saved files list
-    data = storage.read_data()
+    # 收集已保存的文件列表：兼容 file 为字符串、列表或 None
     saved_files = []
-    for n in data.get('notes', []):
-        if n.get('name') == noteName and n.get('lessonName') == lessonName:
-            saved_files = n.get('files', [])
-            break
-
-    # fall back to file field on course note entry
-    if not saved_files and note_entry.get('file'):
-        saved_files = [note_entry.get('file')]
+    file_field = note_entry.get('file')
+    if isinstance(file_field, list):
+        saved_files.extend([f for f in file_field if f])
+    elif isinstance(file_field, str) and file_field:
+        saved_files.append(file_field)
+    # 其他类型（None/空）则保持为空列表，后续将返回空文件数组
 
     files_info = []
     for fname in saved_files:
@@ -222,31 +222,30 @@ def download_note_file():
     if course is None:
         return jsonify({'error': 'course not found for user'}), 404
 
-    note_found = False
+    note_entry = None
     for n in course.get('myNotes', []):
         if n.get('name') == noteName:
-            note_found = True
+            note_entry = n
             break
-    if not note_found:
+    if note_entry is None:
         return jsonify({'error': 'note not found in this course for user'}), 404
 
-    
     # check that filename is among saved files
-    data = storage.read_data()
     saved_files = []
-    for n in data.get('notes', []):
-        if n.get('name') == noteName and n.get('lessonName') == lessonName:
-            saved_files = n.get('files', [])
-            break
+    file_field = note_entry.get('file')
+    if isinstance(file_field, list):
+        saved_files.extend([f for f in file_field if f])
+    elif isinstance(file_field, str) and file_field:
+        saved_files.append(file_field)
 
     if filename not in saved_files:
-        # also allow the legacy course.myNotes 'file' reference
-        if not any(n.get('file') == filename for n in course.get('myNotes', [])):
-            return jsonify({'error': 'file not associated with specified note'}), 404
+        return jsonify({'error': 'file not associated with specified note'}), 404
 
     # serve file from uploads directory
+
+    directory = BASE_STORAGE_DIR / str(user_id) / str(lessonName) / str(noteName)
     try:
-        return send_from_directory(str(UPLOAD_DIR), filename, as_attachment=False)
+        return send_from_directory(str(directory), filename, as_attachment=False)
     except Exception:
         return jsonify({'error': 'file not found on server'}), 404
 
