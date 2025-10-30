@@ -217,6 +217,20 @@
           "myNotes": []
         }
       ]
+    },
+    {
+      "id": 5,
+      "username": "wuwuw",
+      "email": "aaa@pku.edu.cn",
+      "password": "123456",
+      "courses": []
+    },
+    {
+      "id": 6,
+      "username": "awwa",
+      "email": "yh1@pku.edu.cn",
+      "password": "123456",
+      "courses": []
     }
   ],
   "courses": [

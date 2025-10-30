@@ -44,7 +44,7 @@
         
         <div class="form-footer">
           <p>还没有账号？ 
-            <a href="#" @click.prevent="$emit('show-register')">立即注册</a>
+            <a href="#" @click.prevent="emit('show-register')">立即注册</a>
           </p>
         </div>
       </div>
@@ -56,7 +56,7 @@
 import { ref, reactive } from 'vue';
 
 // 定义组件触发的事件
-defineEmits(['show-login', 'show-register', 'login']);
+const emit = defineEmits(['show-login', 'show-register', 'login']);
 
 const loading = ref(false);
 const formData = reactive({
@@ -75,7 +75,7 @@ const handleSubmit = async () => {
   await new Promise(resolve => setTimeout(resolve, 1000));
   
   // 触发登录事件，将表单数据传递给父组件
-  $emit('login', { ...formData });
+  emit('login', { ...formData });
   loading.value = false;
   
   // 清空表单

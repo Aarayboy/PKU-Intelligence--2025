@@ -86,6 +86,10 @@ async function handleRegister(registerData) {
       showLoginModal.value = true;
     }, 800);
   } catch (err) {
+    if(err?.code === 409) {
+      setNotification("注册失败", "用户名或邮箱已被使用", false);
+      return;
+    }
     setNotification("注册失败", err?.message || "注册失败，请稍后重试", false);
   }
 }

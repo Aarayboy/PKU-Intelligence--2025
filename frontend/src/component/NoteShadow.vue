@@ -170,9 +170,9 @@ const resetForm = () => {
             <form @submit.prevent="handleSubmit" class="space-y-6">
                 <!-- 标题输入 -->
                 <div>
-                    <label for="noteTitle" class="block text-sm font-medium text-neutral-700 mb-1">笔记标题 <span
+                    <label for="noteTitle0" class="block text-sm font-medium text-neutral-700 mb-1">笔记标题 <span
                             class="text-danger">*</span></label>
-                    <input type="text" id="noteTitle" v-model="formData.title" placeholder="输入笔记标题..." required
+                    <input type="text" id="noteTitle0" v-model="formData.title" placeholder="输入笔记标题..." required
                         class="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-custom text-lg">
                 </div>
                 <!-- 所属课程选择 -->

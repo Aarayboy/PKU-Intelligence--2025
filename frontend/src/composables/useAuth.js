@@ -24,18 +24,17 @@ async function register(payload) {
     email: payload.email, 
     password: payload.password 
   });
-  
   // 2. 解析用户数据
   const user = res?.user || res;
   
   // 3. 验证注册结果
   if (!user) throw new Error('注册失败');
   
-  // 4. 注册成功后自动登录（更新状态和本地存储）
-  currentUser.value = { ...user };
-  isLoggedIn.value = true;
-  localStorage.setItem('currentUser', JSON.stringify(user));
-  localStorage.setItem('isLoggedIn', 'true');
+  // // 4. 注册成功后自动登录（更新状态和本地存储）
+  // currentUser.value = { ...user };
+  // isLoggedIn.value = true;
+  // localStorage.setItem('currentUser', JSON.stringify(user));
+  // localStorage.setItem('isLoggedIn', 'true');
   
   // 5. 关闭注册模态框（如果打开）
   showRegisterModal.value = false;

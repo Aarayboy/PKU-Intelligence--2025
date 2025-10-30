@@ -1,4 +1,6 @@
-<script setup></script>
+<script setup>
+const emit = defineEmits(['logout']);
+</script>
 <template>
   <div class="bg-white shadow-md">
     <div class="max-w-7xl mx-auto px-10 py-4 flex justify-between items-center">
@@ -11,7 +13,7 @@
                 <button class="p-2 rounded-lg hover:cursor-pointer hover:bg-gray-200">
                   <img src="../assets/client.svg" class="h-5"></img>
                 </button>
-                <button class="p-2 rounded-lg hover:cursor-pointer hover:bg-gray-200">
+                <button class="p-2 rounded-lg hover:cursor-pointer hover:bg-gray-200" @click="emit('logout')">
                 <img src="../assets/logout.svg" class="h-5"></img>
                 </button>
             </nav>
