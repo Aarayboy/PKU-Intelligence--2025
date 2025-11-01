@@ -3,7 +3,6 @@ import api from '@/api';
 
 const isLoggedIn = ref(false);
 const currentUser = ref(null);
-const showLoginModal = ref(false);
 const showRegisterModal = ref(false);
 
 async function login(credentials) {
@@ -53,7 +52,6 @@ export function useAuth() {
   return {
     isLoggedIn,
     currentUser,
-    showLoginModal,
     showRegisterModal,
     login,
     register,

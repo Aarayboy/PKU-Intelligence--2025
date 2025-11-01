@@ -5,7 +5,6 @@ import NavAndMain from "./component/NavAndMain.vue";
 import ClassShadow from "./component/ClassShadow.vue";
 import NoteShadow from "./component/NoteShadow.vue";
 import Notification from "./component/Notification.vue";
-import LoginModal from "./component/LoginModal.vue";
 import RegisterModal from "./component/RegisterModal.vue";
 import WelcomePage from "./component/WelcomePage.vue";
 
@@ -16,7 +15,6 @@ import { useNotification } from "./composables/useNotification";
 const {
   isLoggedIn,
   currentUser,
-  showLoginModal,
   showRegisterModal,
   login,
   register,
@@ -50,19 +48,12 @@ onMounted(() => {
   }
 });
 
-// 实现切换到注册模态框和登陆模态框
-const switchToRegister = () => {
-  showLoginModal.value = false;
-  // 延迟切换避免动画冲突
-  setTimeout(() => {
-    showRegisterModal.value = true;
-  }, 300);
-};
-
 const switchToLogin = () => {
   showRegisterModal.value = false;
+  // 关闭注册模态框后显示WelcomePage
   setTimeout(() => {
-    showLoginModal.value = true;
+    isLoggedIn.value = false;
+    currentUser.value = null;
   }, 300);
 };
 
@@ -70,7 +61,6 @@ async function handleLogin(loginData) {
   try {
     const user = await login(loginData);
     await loadUserData(user.id, setNotification);
-    showLoginModal.value = false;
     setNotification("登录成功", `欢迎回来，${user.username}`, true);
   } catch (err) {
     setNotification("登录失败", err?.message || "用户名或密码错误", false);
@@ -83,7 +73,8 @@ async function handleRegister(registerData) {
     showRegisterModal.value = false;
     setNotification("注册成功", "请使用新账号登录", true);
     setTimeout(() => {
-      showLoginModal.value = true;
+      isLoggedIn.value = false;
+      currentUser.value = null;
     }, 800);
   } catch (err) {
     if(err?.code === 409) {
@@ -93,6 +84,7 @@ async function handleRegister(registerData) {
     setNotification("注册失败", err?.message || "注册失败，请稍后重试", false);
   }
 }
+
 
 function handleLogout() {
   logout();
@@ -109,14 +101,6 @@ function CloseFileView() {
   <Notification
     v-bind="notificationData"
     @close="() => (notificationData.visible = false)"
-  />
-
-  <!-- 登录模态框 -->
-  <LoginModal
-    :visible="showLoginModal"
-    @close="() => (showLoginModal = false)"
-    @login="handleLogin"
-    @switch-to-register="switchToRegister"
   />
 
   <!-- 注册模态框 -->
@@ -213,7 +197,6 @@ function CloseFileView() {
   <!-- 未登录状态显示登录界面 -->
   <WelcomePage
     v-else
-    @show-login="showLoginModal = true"
     @show-register="showRegisterModal = true"
     @login="handleLogin"
   />
