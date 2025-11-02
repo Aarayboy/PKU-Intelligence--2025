@@ -249,12 +249,20 @@ def download_note_file():
     except Exception:
         return jsonify({'error': 'file not found on server'}), 404
 
-@app.route('/cloud', methods=['GET'])
+@app.route('/cloud', methods=['POST'])
 def cloud_status():
-    userId = request.args.get('userId')
-    xuehao = request.args.get('xuehao')
-    password = request.args.get('password')
-    pass
+    data = None
+    if request.is_json:
+        data = request.get_json()
+
+    userId = data.get('userId')
+    xuehao = data.get('xuehao')
+    password = data.get('password')
+    
+    # 一些处理逻辑
+
+    
+    return jsonify({'success': True, 'message': f'Cloud function called with userId: {userId}, xuehao: {xuehao}, password: {password}'}), 200
 
 if __name__ == '__main__':
     # Run on port 4000

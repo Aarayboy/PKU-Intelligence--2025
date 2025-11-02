@@ -148,6 +148,14 @@ export async function register(payload = {}) {
   });
 }
 
+export async function cloud({userId, xuehao, password} = {}) {
+  return request('/cloud', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId, xuehao: xuehao, password: password }),
+   });
+}
+
 
 
 export default {
@@ -159,4 +167,5 @@ export default {
   getNoteFileUrl,
   getNoteFiles,
   downloadNoteFile,
+  cloud,
 };

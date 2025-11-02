@@ -87,7 +87,7 @@ const resetForm = () => {
     <div v-show="visible" class="global-mask">
         <div
             class="bg-white rounded-2xl shadow-soft p-5 md:p-8 mb-8 transition-custom hover:shadow-hover max-w-2xl w-full">
-
+            <h2 class="text-2xl font-bold mb-6 text-center text-pkured">添加新课程</h2>
             <form @submit.prevent="handleSubmit" class="space-y-6">
                 <!-- 课程名输入 -->
                 <div>

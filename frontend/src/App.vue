@@ -7,6 +7,7 @@ import NoteShadow from "./component/NoteShadow.vue";
 import Notification from "./component/Notification.vue";
 import RegisterModal from "./component/RegisterModal.vue";
 import WelcomePage from "./component/WelcomePage.vue";
+import CloudShadow from "./component/CloudShadow.vue";
 
 import { useAuth } from "./composables/useAuth";
 import { useUserData } from "./composables/useUserData";
@@ -27,6 +28,7 @@ const showNewCourseModal = ref(false);
 const showNewNoteModal = ref(false);
 const fileview = ref(false);
 const filepath = ref("");
+const showCloudModal = ref(false);
 
 provide("userData", readonly(userData));
 provide("isLoggedIn", isLoggedIn);
@@ -113,10 +115,22 @@ function CloseFileView() {
 
   <!-- 主应用内容 -->
   <div v-if="isLoggedIn">
-    <Banner :user="currentUser" @logout="handleLogout" />
+    <Banner :user="currentUser" @logout="handleLogout" @cloud="() => (showCloudModal = true)" />
     
     <div class="flex w-full justify-center">
       <div class="w-full max-w-7xl px-4">
+        <CloudShadow
+          :visible="showCloudModal"
+          :user-id="currentUser?.id"
+          @close="() => (showCloudModal = false)"
+          @showNotification="setNotification"
+          @hasCloud="
+              () => {
+                // 同步数据后从后端重新加载用户数据以保持一致
+                loadUserData(currentUser?.id);
+              }
+            "
+        />
         <ClassShadow
           :visible="showNewCourseModal"
           :user-id="currentUser?.id"
