@@ -7,8 +7,8 @@ import time
 
 # ======================= 【TODO: 你的凭证和平台URL】 =======================
 # 请替换为你的真实信息
-PKU_USERNAME = "2300013230" 
-PKU_PASSWORD = "1111111"
+PKU_USERNAME = "your stu_id" 
+PKU_PASSWORD = "your password"
 # 课程平台首页，从这里开始点击登录
 COURSE_BASE_URL = "https://course.pku.edu.cn/" 
 # 登录成功后跳转的页面URL特征，用于等待
@@ -38,7 +38,7 @@ def pku_login_and_get_session(username, password, base_url):
     # options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')
+    options.add_argument('--disable-gpu')s
     options.add_argument('log-level=3') # 减少控制台输出
 
     driver = webdriver.Chrome(options=options)

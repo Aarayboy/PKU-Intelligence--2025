@@ -1,5 +1,5 @@
 from flask import Flask, jsonify
-import spider # 导入爬虫模块
+from . import spider # 导入爬虫模块
 
 app = Flask(__name__)
 app.config['JSON_AS_ASCII'] = False # 传给前端的json信息直接使用中文，不转义为 Unicode

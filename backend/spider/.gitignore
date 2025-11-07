@@ -1,0 +1,18 @@
+# --- Python cache ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- OS cache ---
+.DS_Store
+Thumbs.db
+
+# --- Downloaded or generated files ---
+downloads/
+
+# --- Logs ---
+*.log
+
+# --- Temporary or test files ---
+*.tmp
+*.bak

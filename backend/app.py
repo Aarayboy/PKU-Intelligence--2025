@@ -3,7 +3,7 @@ from flask_cors import CORS
 from pathlib import Path
 import os
 from werkzeug.utils import secure_filename
-import storage
+from database import storage
 import dotenv
 import spider.spider as spider
 dotenv.load_dotenv()
