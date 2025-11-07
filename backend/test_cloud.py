@@ -7,7 +7,7 @@ def test_cloud_status():
     payload = {
         "userId": 1,
         "xuehao": "2300013230",  # 替换为真实学号
-        "password": "7e499c7e499c"   # 替换为真实密码
+        "password": "1111111"   # 替换为真实密码
     }
     
     try:
