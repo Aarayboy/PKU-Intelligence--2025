@@ -38,7 +38,7 @@ def pku_login_and_get_session(username, password, base_url):
     # options.add_argument('--headless')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
-    options.add_argument('--disable-gpu')s
+    options.add_argument('--disable-gpu')
     options.add_argument('log-level=3') # 减少控制台输出
 
     driver = webdriver.Chrome(options=options)

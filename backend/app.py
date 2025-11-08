@@ -261,6 +261,7 @@ def cloud_status():
     userId = data.get('userId')
     xuehao = data.get('xuehao')
     password = data.get('password')
+    print(f"UserId:{userId},xuehao:{xuehao}, password:{password}")
     
     if not userId or not xuehao or not password:
         return jsonify({'success': False, 'error': 'userId, xuehao和password均为必填'}), 400

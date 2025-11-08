@@ -17,4 +17,5 @@ __all__ = [
     "add_user",
     "add_course",
     "add_note",
+    "seed",
 ]
