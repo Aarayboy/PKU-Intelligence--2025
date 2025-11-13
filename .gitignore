@@ -17,6 +17,9 @@ coverage
 /cypress/videos/
 /cypress/screenshots/
 
+/__pycache__/
+*.pyc
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
@@ -26,5 +29,14 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+*.db
+*.json
+*.sqlite
+
+uploads/
+backend/uploads/
+
+desktop.ini
 
 *.tsbuildinfo
