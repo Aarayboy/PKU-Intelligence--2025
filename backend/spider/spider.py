@@ -4,9 +4,8 @@ import os
 import re
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
-from spider import login
+import login
 from pathlib import Path
-
 
 CURRENT_SEMESTER_LABEL = os.getenv("CURRENT_SEMESTER_LABEL", "25-26学年第1学期") # 手动指定“本学期”的标记
 SEMESTER_PATTERN = re.compile(r"\d{2}-\d{2}学年第[1-2]学期") # 用来从课程名里提取 “25-26学年第1学期” 这一段
@@ -206,6 +205,7 @@ def start_spidering():
 
     # 1) 先解析当前账号的所有课程（名字 + course_id + launcher_url）
     courses = get_all_courses(s)
+    course_name = courses[0]['name'] if courses else 'N/A'
     print(courses) # 调试使用
     if not courses:
         print("没有解析到任何课程，爬虫终止。")
@@ -289,7 +289,7 @@ def start_spidering():
         time.sleep(1)
 
     print(f"\ 下载任务完成，共下载 {len(downloaded_files)} 个文件。")
-    return downloaded_files
+    return downloaded_files,course_name
 
 
 if __name__ == "__main__":
