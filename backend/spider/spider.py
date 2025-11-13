@@ -288,7 +288,7 @@ def start_spidering():
             downloaded_files.append(saved_path)
         time.sleep(1)
 
-    print(f"\ 下载任务完成，共下载 {len(downloaded_files)} 个文件。")
+    print(f"下载任务完成，共下载 {len(downloaded_files)} 个文件。")
     return downloaded_files
 
 
