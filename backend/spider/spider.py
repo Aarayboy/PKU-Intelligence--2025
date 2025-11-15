@@ -4,7 +4,7 @@ import os
 import re
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
-import login
+from spider import login
 from pathlib import Path
 
 CURRENT_SEMESTER_LABEL = os.getenv("CURRENT_SEMESTER_LABEL", "25-26学年第1学期") # 手动指定“本学期”的标记
