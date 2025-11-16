@@ -36,7 +36,7 @@ const handleSubmit = async () => {
     isSubmitting.value = true;
     const payload = {
         xuehao : formData.xuehao.trim(),
-        tags: formData.password.trim(),
+        password: formData.password.trim(),
         userId: formData.userId,
         course: formData.course,
     };
