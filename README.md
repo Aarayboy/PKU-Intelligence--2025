@@ -12,7 +12,7 @@ pip install -r requirements.txt
 然后运行`seed_data.py`来创建模拟数据（可选）
 
 ```shell
-python seed_data.py
+python seed.py
 ```
 
 最后运行服务

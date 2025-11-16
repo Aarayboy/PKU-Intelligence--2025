@@ -70,7 +70,7 @@ const handleSubmit = async () => {
 };
 
 const upToServer = async (data) => {
-    const response = await api.cloud({userId: data.userId, xuehao: data.xuehao, password: data.password});
+    const response = await api.cloud({userId: data.userId, xuehao: data.xuehao, password: data.password, course: data.course});
     return response;
 };
 
@@ -107,7 +107,7 @@ const resetForm = () => {
                 <div v-show="choseCourse">
                     <label for="course" class="block text-sm font-medium text-neutral-700 mb-1">课程选择 <span
                             class="text-danger">*</span></label>
-                    <select id="course" v-model="formData.course" required
+                    <select id="course" v-model="formData.course" :required="choseCourse"
                         class="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-custom text-lg">
                         <option value="" disabled>请选择课程...</option>
                         <option v-for="course in cloudCourses" :key="course.id" :value="course.id">
