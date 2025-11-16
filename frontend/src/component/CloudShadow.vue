@@ -3,11 +3,14 @@ import { ref, reactive } from 'vue';
 import api from '@/api';
 const props = defineProps(['visible', 'userId']);
 const emit = defineEmits(['close', 'showNotification', 'hasCloud']);
+const choseCourse = ref(false);
+const cloudCourses = ref([]);
 
 const formData = reactive({
     xuehao: '',
     password: '',
     userId: props.userId,
+    course: '',
 });
 
 // 关闭窗口
@@ -35,15 +38,30 @@ const handleSubmit = async () => {
         xuehao : formData.xuehao.trim(),
         password: formData.password.trim(),
         userId: formData.userId,
+        course: formData.course,
     };
+    if(!choseCourse.value){
+        payload.course = '';
+    }
     try {
         // 上传到后端并使用后端返回的数据
         const res = await upToServer(payload);
         const Isok = res?.message || res;
 
-        emit('hasCloud');
-        emit('showNotification', '成功', Isok, true);
-        closeWindow();
+        if(!choseCourse.value && res.courses && res.courses.length > 0){
+            choseCourse.value = true;
+            emit('showNotification', '请选择课程', '请从下拉菜单中选择课程后再次点击同步课程', true);
+            cloudCourses.value = [];
+            for (const course of res.courses) {
+                cloudCourses.value.push({id: course.id, name: course.name});
+            }
+        }
+        else{
+            choseCourse.value = false;
+            emit('hasCloud');
+            emit('showNotification', '成功', Isok, true);
+            closeWindow();
+        }
     } catch (err) {
         emit('showNotification', '同步失败', err?.message || '同步失败，请稍后重试', false);
     } finally {
@@ -52,7 +70,7 @@ const handleSubmit = async () => {
 };
 
 const upToServer = async (data) => {
-    const response = await api.cloud({userId: data.userId, xuehao: data.xuehao, password: data.password});
+    const response = await api.cloud({userId: data.userId, xuehao: data.xuehao, password: data.password, course: data.course});
     return response;
 };
 
@@ -60,6 +78,7 @@ const upToServer = async (data) => {
 const resetForm = () => {
     formData.xuehao = '';
     formData.password = '';
+    formData.course = '';
 };
 
 </script>
@@ -83,6 +102,18 @@ const resetForm = () => {
                             class="text-danger">*</span></label>
                     <input type="password" id="password" v-model="formData.password" placeholder="输入密码..." required
                         class="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-custom text-lg">
+                </div>
+
+                <div v-show="choseCourse">
+                    <label for="course" class="block text-sm font-medium text-neutral-700 mb-1">课程选择 <span
+                            class="text-danger">*</span></label>
+                    <select id="course" v-model="formData.course" :required="choseCourse"
+                        class="w-full px-4 py-3 rounded-xl border border-neutral-300 focus:border-primary focus:ring-2 focus:ring-primary/20 outline-none transition-custom text-lg">
+                        <option value="" disabled>请选择课程...</option>
+                        <option v-for="course in cloudCourses" :key="course.id" :value="course.id">
+                            {{ course.name }}
+                        </option>
+                    </select>
                 </div>
                 
                 <!-- 提交按钮 -->
