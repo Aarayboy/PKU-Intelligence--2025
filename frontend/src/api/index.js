@@ -184,4 +184,6 @@ export default {
   getNoteFiles,
   downloadNoteFile,
   cloud,
+  EditCourse,
+  EditNote,
 };

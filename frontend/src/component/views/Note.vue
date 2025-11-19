@@ -137,8 +137,9 @@ function Del_Course(Coursename) {
                   v-model="UserInput" @keyup.enter="EditCourseName[index] = false" @blur="() => {
                     // console.log('课程名修改为: ', UserInput);
                     EditCourseName[index] = false;
-                    EditCourse({userId: userData.userId, oldName: course.name, newName: UserInput});
+                    api.EditCourse({userId: userData.userId, oldName: course.name, newName: UserInput});
                     userData.courses[index].name = UserInput;
+                    console.log('课程名已更新为: ', userData.courses[index].name);
                     UserInput = '';
                   }">
                 </input>
@@ -193,10 +194,10 @@ function Del_Course(Coursename) {
                     class="text-base content-center flex-1">
                     {{ note.name }}
                   </span>
-                  <input v-else ref="EditNotName[index][noteIndex]" type="text" class="border border-gray-300 rounded px-2 py-1 flex-1"
+                  <input v-else ref="EditNoteName[index][noteIndex]" type="text" class="border border-gray-300 rounded px-2 py-1 flex-1"
                     v-model="UserInput" @keyup.enter="EditNoteName[index][noteIndex] = false" @blur="() => {
-                      Edit[index][noteIndex] = false;
-                      EditNote({userId: userData.userId, lessonName: course.name, oldName: note.name, newName: UserInput});
+                      EditNoteName[index][noteIndex] = false;
+                      api.EditNote({userId: userData.userId, lessonName: course.name, oldName: note.name, newName: UserInput});
                       userData.courses[index].myNotes[noteIndex].name = UserInput;
                       UserInput = '';
                     }">
