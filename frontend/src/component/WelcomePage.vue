@@ -1,14 +1,16 @@
 <template>
   <div class="login-container">
     <!-- 左侧留白区域 -->
-    <div class="left-space"></div>
+    <div class="left-space">
+      <img src="@/assets/WelcomePagePicture.jpg" alt="PKU Intelligence 背景图" class="left-bg-img">
+    </div>
     
     <!-- 右侧内容区域 -->
     <div class="right-content">
       <!-- 标语区域（居中） -->
       <div class="slogan">
-        <h1>课程笔记管理系统</h1>
-        <p>高效管理你的学习笔记和课程资料</p>
+        <h1>PKU Intelligence</h1>
+        <p>更适合北京大学学生的笔记管理系统</p>
       </div>
       
       <!-- 直接显示登录框 -->
@@ -93,7 +95,22 @@ const handleSubmit = async () => {
 
 /* 左侧留白区域 - 占比50% */
 .left-space {
-  flex: 1; /* 左侧留白占一半宽度 */
+  flex: 1;
+  position: relative; /* 新增：作为图片绝对定位的父容器 */
+  overflow: hidden; /* 新增：隐藏图片超出区域 */
+}
+
+/* 新增：左侧图片的样式 */
+.left-bg-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80%;
+  height: 80%;
+  object-fit: cover; /* 关键：让图片等比例铺满容器，裁剪多余部分 */
+  transform: translate(20%, 10%); /* 调整位置使其居中显示 */
+  /* 可选：添加轻微透明度，避免图片遮挡文字（若有） */
+  /* opacity: 0.9; */
 }
 
 /* 右侧内容区域 - 占比50% */
@@ -117,6 +134,7 @@ const handleSubmit = async () => {
   margin-bottom: 1rem;
   font-weight: 300;
   color: #333; /* 深色文字与白色背景对比 */
+  font-family: "Times New Roman", Times, serif; /* 设置Times New Roman字体 */
 }
 
 .slogan p {
