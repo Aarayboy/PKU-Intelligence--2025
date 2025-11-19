@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 from database import storage
 import dotenv
 import spider.spider as spider
+import spider.login as login
 dotenv.load_dotenv()
 LocalHost = os.getenv('localhost') or ''
 # Resolve and ensure the base storage directory exists
@@ -14,6 +15,27 @@ BASE_STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 app = Flask(__name__)
 CORS(app)
+
+# 全局复用的 session，但先不登录，等第一次请求再说
+_session = None
+# 用于存储本学期课程列表
+_courses = None
+
+def get_session(id, password):
+    """懒加载：第一次用到时才登录，后面复用同一个 session。"""
+    global _session
+    if _session is not None:
+        return _session
+
+    s = login.pku_login_and_get_session(id, password, login.COURSE_BASE_URL)
+
+    if s is None:
+        print("登录失败")
+        return None
+
+    _session = s
+    return _session
+
 
 
 @app.route('/userdata', methods=['GET'])
@@ -252,6 +274,8 @@ def download_note_file():
 
 @app.route('/cloud', methods=['POST'])
 def cloud_status():
+    global _courses 
+
     data = None
     if request.is_json:
         data = request.get_json()
@@ -269,122 +293,76 @@ def cloud_status():
 
     # 先获取课程列表，course为空即为需要爬取所有课程名字
     if course == None or course == '':
-        sample_courses = [{'id': 1, 'name': '计算机网络'}, {'id': 2, 'name': '操作系统'}] # 示例课程列表
-        return jsonify({'success': True, 'message': '课程为空，准备爬取所有课程', 'courses': sample_courses}), 200
+        session = get_session(xuehao, password)
+        # sample_courses = [{'id': 1, 'name': '计算机网络'}, {'id': 2, 'name': '操作系统'}] # 示例课程列表
+        courses = spider.get_current_semester_course_list(session)
+        _courses = courses
+        return jsonify({'success': True, 'message': '课程为空，准备爬取所有课程', 'courses': courses}), 200
     # course不为空，爬取指定课程，返回的course是课程ID
     else:
+        # 先下载
+        downloaded_files = spider.download_handouts_for_course(_session, course_id=course, section_names=["课程讲义", "课程文件"], max_files=3, download_root="uploads") # section_names 想加啥加啥
+
+        # 使用 storage.add_course 创建课程
+        course_title = _courses[course - 1]["name"]
+        course_tags = ["课程文件"]
+        course = storage.add_course(course_title, course_tags, userId)
+        if not course:
+            print(f"课程 '{course_title}' 可能已存在")
+
+        # 我看不懂下面这段在干嘛
+        results = []
+        for info in downloaded_files:
+            # 提取文件名和笔记标题
+            file_path = info.get("path")
+            note_title = info.get("name") or ""
+            
+            # 创建笔记目录：uploads/userId/course_title/note_title/
+            note_dir = BASE_STORAGE_DIR / str(userId) / course_title / note_title
+            note_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 复制文件到笔记目录
+            file_name = os.path.basename(file_path)
+            dest_path = note_dir / file_name
+            import shutil
+            shutil.copy2(file_path, dest_path)
+            
+            # 使用 storage.add_note 创建笔记
+            # 参数对应数据库字段：
+            # - title -> notes.name (笔记标题)
+            # - lessonName -> courses.title (通过course_id关联)
+            # - files -> notes.file (文件名)
+            note = storage.add_note(
+                title=note_title,        # 对应 notes.name
+                lessonName=course_title, # 对应 courses.title
+                tags=["软工"],       # 笔记标签
+                files=[file_name],       # 对应 notes.file (存储文件名)
+                user_id=userId
+            )
+            
+            if note:
+                results.append({
+                    'note_name': note_title,      # 对应 notes.name
+                    'file_name': file_name,       # 对应 notes.file
+                    'course_title': course_title, # 对应 courses.title
+                    'status': 'success',
+                    'note_id': note.get('id')
+                })
+                print(f"✓ 成功创建笔记: {note_title}, 文件: {file_name}")
+            else:
+                results.append({
+                    'note_name': note_title,
+                    'file_name': file_name, 
+                    'course_title': course_title,
+                    'status': 'failed'
+                })
+                print(f"✗ 创建笔记失败: {note_title}")
+
+
+        # 最后返回信息
         return jsonify({'success': True, 'message': f'准备爬取课程: {course}', 'courses': []}), 200
-    # try:
-    #     # 1. 验证用户是否存在
-    #     user = storage.get_user(userId)
-    #     if not user:
-    #         return jsonify({'success': False, 'error': '用户不存在'}), 404
+    
 
-    #     # 2. 更新爬虫凭证并运行爬虫
-    #     import spider.login as login_module
-    #     login_module.PKU_USERNAME = xuehao
-    #     login_module.PKU_PASSWORD = password
-        
-    #     session = login_module.pku_login_and_get_session(xuehao, password, login_module.COURSE_BASE_URL)
-    #     if not session:
-    #         return jsonify({'success': False, 'error': '登录课程网站失败，请检查学号和密码'}), 401
-
-    #     # 3. 运行爬虫下载文件
-    #     downloaded_files,course_name = spider.start_spidering()
-        
-    #     if not downloaded_files:
-    #         return jsonify({
-    #             'success': True, 
-    #             'message': '爬虫已运行，但没有下载到任何文件',
-    #             'downloaded_files': []
-    #         }), 200
-
-    #     # 4. 为爬虫文件创建统一的课程
-    #     course_title = course_name
-    #     course_tags = ["自动爬取"]
-        
-    #     # 使用 storage.add_course 创建课程
-    #     course = storage.add_course(course_title, course_tags, userId)
-    #     if not course:
-    #         print(f"课程 '{course_title}' 可能已存在")
-
-    #     # 5. 为每个文件创建笔记记录
-    #     results = []
-    #     for file_path in downloaded_files:
-    #         # 提取文件名和笔记标题
-    #         file_name = os.path.basename(file_path)
-    #         note_title = os.path.splitext(file_name)[0]  # 去掉扩展名作为笔记标题
-            
-    #         # 创建笔记目录：uploads/userId/course_title/note_title/
-    #         note_dir = BASE_STORAGE_DIR / str(userId) / course_title / note_title
-    #         note_dir.mkdir(parents=True, exist_ok=True)
-            
-    #         # 复制文件到笔记目录
-    #         dest_path = note_dir / file_name
-    #         import shutil
-    #         shutil.copy2(file_path, dest_path)
-            
-    #         # 使用 storage.add_note 创建笔记
-    #         # 参数对应数据库字段：
-    #         # - title -> notes.name (笔记标题)
-    #         # - lessonName -> courses.title (通过course_id关联)
-    #         # - files -> notes.file (文件名)
-    #         note = storage.add_note(
-    #             title=note_title,        # 对应 notes.name
-    #             lessonName=course_title, # 对应 courses.title
-    #             tags=["爬虫文件"],       # 笔记标签
-    #             files=[file_name],       # 对应 notes.file (存储文件名)
-    #             user_id=userId
-    #         )
-            
-    #         if note:
-    #             results.append({
-    #                 'note_name': note_title,      # 对应 notes.name
-    #                 'file_name': file_name,       # 对应 notes.file
-    #                 'course_title': course_title, # 对应 courses.title
-    #                 'status': 'success',
-    #                 'note_id': note.get('id')
-    #             })
-    #             print(f"✓ 成功创建笔记: {note_title}, 文件: {file_name}")
-    #         else:
-    #             results.append({
-    #                 'note_name': note_title,
-    #                 'file_name': file_name, 
-    #                 'course_title': course_title,
-    #                 'status': 'failed'
-    #             })
-    #             print(f"✗ 创建笔记失败: {note_title}")
-
-    #     # 6. 验证存储结果
-    #     updated_user = storage.get_user(userId)
-    #     if updated_user:
-    #         # 检查课程是否创建成功
-    #         for course in updated_user.get('courses', []):
-    #             if course.get('name') == course_title:
-    #                 print(f"课程 '{course_title}' 创建成功，包含 {len(course.get('myNotes', []))} 个笔记")
-    #                 for note in course.get('myNotes', []):
-    #                     print(f"  - 笔记: {note.get('name')}, 文件: {note.get('file')}")
-
-    #     return jsonify({
-    #         'success': True, 
-    #         'message': f'爬虫完成，成功存储 {len([r for r in results if r["status"] == "success"])} 个文件',
-    #         'storage_info': {
-    #             'course_created': course_title,
-    #             'notes_count': len([r for r in results if r["status"] == "success"]),
-    #             'storage_path': f"uploads/{userId}/{course_title}/"
-    #         },
-    #         'results': results
-    #     }), 200
-
-    # except Exception as e:
-    #     print(f"cloud_status 过程出错: {e}")
-    #     import traceback
-    #     traceback.print_exc()
-        
-    #     return jsonify({
-    #         'success': False, 
-    #         'error': f'处理过程中发生错误: {str(e)}'
-    #     }), 500
 
 
 
