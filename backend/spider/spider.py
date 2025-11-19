@@ -1,21 +1,23 @@
-import time
-import requests
 import os
 import re
-from urllib.parse import urljoin, urlparse
-from bs4 import BeautifulSoup
-from spider import login
+import time
 from pathlib import Path
+from urllib.parse import urljoin, urlparse
+
+import requests
+from bs4 import BeautifulSoup
+
+from spider import login
 
 
 def get_filename_from_response(response, fallback_url):
-    
     """从响应头或URL提取真实文件名"""
-    cd = response.headers.get('Content-Disposition', '')
+    cd = response.headers.get("Content-Disposition", "")
     filename = None
 
-    if 'filename=' in cd:
+    if "filename=" in cd:
         import re
+
         match = re.search(r'filename\*?=(?:UTF-8\'\')?"?([^";]+)"?', cd)
         if match:
             filename = match.group(1)
@@ -94,7 +96,6 @@ def download_file(file_url, session, save_dir: str | Path | None = None):
     return str(save_path)
 
 
-
 def _extract_pure_course_name(full_text: str) -> str:
     """
     从完整课程标题中提取“纯净课程名”。
@@ -115,8 +116,6 @@ def _extract_pure_course_name(full_text: str) -> str:
         pure_name = after_code.strip()
 
     return pure_name
-
-
 
 
 def get_current_semester_course_list(session):
@@ -153,8 +152,7 @@ def get_current_semester_course_list(session):
             # 精准找 <ul class="portletList-img courseListing coursefakeclass ">
             # 注意 class 有多个，所以用 lambda 判断包含 'coursefakeclass'
             ul = soup.find(
-                "ul",
-                attrs={"class": lambda v: v and "coursefakeclass" in v}
+                "ul", attrs={"class": lambda v: v and "coursefakeclass" in v}
             )
             if ul:
                 found_ul = ul
@@ -175,18 +173,18 @@ def get_current_semester_course_list(session):
         full_text = a.get_text(strip=True)
         pure_name = _extract_pure_course_name(full_text)
 
-        result.append({
-            "id": idx,
-            "name": pure_name,
-        })
+        result.append(
+            {
+                "id": idx,
+                "name": pure_name,
+            }
+        )
 
     print(f"当前学期课程列表共 {len(result)} 门：")
     for c in result:
         print(f"  - {c['id']}: {c['name']}")
 
     return result
-
-
 
 
 def download_handouts_for_course(
@@ -247,8 +245,7 @@ def download_handouts_for_course(
             soup = BeautifulSoup(resp.text, "html.parser")
 
             ul = soup.find(
-                "ul",
-                attrs={"class": lambda v: v and "coursefakeclass" in v}
+                "ul", attrs={"class": lambda v: v and "coursefakeclass" in v}
             )
             if ul:
                 found_ul = ul
@@ -338,14 +335,16 @@ def download_handouts_for_course(
 
                 # 常见情况：前面有一个 "文件"（来自 <img alt="文件">）
                 if display_name.startswith("文件"):
-                    display_name = display_name[len("文件"):].strip()
+                    display_name = display_name[len("文件") :].strip()
 
                 # 去重：按 URL 去重
                 if not any(item["url"] == full_url for item in all_file_links):
-                    all_file_links.append({
-                        "url": full_url,
-                        "name": display_name,
-                    })
+                    all_file_links.append(
+                        {
+                            "url": full_url,
+                            "name": display_name,
+                        }
+                    )
                     print(f"  找到文件链接: {full_url}  名称: {display_name}")
 
     print(f"\n🔍 在栏目 {section_names} 中共发现 {len(all_file_links)} 个文件链接。")
@@ -362,12 +361,13 @@ def download_handouts_for_course(
         print(f"\n [{i}/{len(all_file_links)}] 正在下载: {file_url} ({display_name})")
         saved_path = download_file(file_url, session, save_dir=download_root)
         if saved_path is not None:
-            downloaded_files.append({
-                "path": saved_path,
-                "name": display_name,
-            })
+            downloaded_files.append(
+                {
+                    "path": saved_path,
+                    "name": display_name,
+                }
+            )
         time.sleep(1)
 
     print(f"\n✅ 栏目文件下载完成，共下载 {len(downloaded_files)} 个文件。")
     return downloaded_files
-    

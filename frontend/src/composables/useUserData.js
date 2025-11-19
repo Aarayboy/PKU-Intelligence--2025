@@ -20,7 +20,7 @@ class MyCourse {
 class UserData {
   // accept an options object so we can keep backward compatibility and also
   // assign any extra properties that backend may return (e.g. avatar, bio, role)
-  constructor({ courses = [], username = '', userId = null, email = ''} = {}) {
+  constructor({ courses = [], username = '', userId = null, email = '' } = {}) {
     this.username = username;
     this.userId = userId;
     this.email = email;
@@ -34,16 +34,21 @@ function mapToUserData(payload) {
   // payload may be the response body or an object like { data: { ... } }
   const body = payload?.data ?? payload ?? {};
 
-  const courses = (body?.courses ?? [])
-    .map((c) => new MyCourse(
-      c?.name ?? '',
-      Array.isArray(c?.tags) ? c.tags : [],
-      (c?.myNotes ?? []).map((n) => new MyNote(
-        n?.name ?? '',
-        n?.file ?? null,
-        n?.lessonName ?? c?.name ?? ''
-      ))
-    ));
+  const courses = (body?.courses ?? []).map(
+    (c) =>
+      new MyCourse(
+        c?.name ?? '',
+        Array.isArray(c?.tags) ? c.tags : [],
+        (c?.myNotes ?? []).map(
+          (n) =>
+            new MyNote(
+              n?.name ?? '',
+              n?.file ?? null,
+              n?.lessonName ?? c?.name ?? ''
+            )
+        )
+      )
+  );
 
   // Build a user data object that preserves any extra fields from backend
   const userDataObj = {
