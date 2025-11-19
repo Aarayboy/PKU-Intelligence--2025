@@ -21,6 +21,8 @@ python seed.py
 python app.py
 ```
 
+获取教学网对应数据
+
 #### 前端
 
 依赖下载
