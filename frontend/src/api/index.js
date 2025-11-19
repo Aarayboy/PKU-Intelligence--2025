@@ -148,11 +148,11 @@ export async function register(payload = {}) {
   });
 }
 
-export async function cloud({userId, xuehao, password} = {}) {
+export async function cloud({userId, xuehao, password, course} = {}) {
   return request('/cloud', { 
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: userId, xuehao: xuehao, password: password }),
+      body: JSON.stringify({ userId: userId, xuehao: xuehao, password: password, course: course }),
    });
 }
 
