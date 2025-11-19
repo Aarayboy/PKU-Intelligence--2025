@@ -1,11 +1,25 @@
 <script setup>
-import { Edit } from "lucide-react";
-import api from "@/api";
-import { ref, reactive, inject } from "vue";
-const userData = inject("userData"); // readonly user data from App.vue
+import { Edit, User } from "lucide-react";
+import api, { EditNote } from "@/api";
+import { ref, reactive, inject, watch } from "vue";
+const userData = inject("userData");
 const fileview = inject("fileview");
 const filepath = inject("filepath");
 const searchinput = ref(null);
+const EditCourseName = ref(new Array(userData.courses.length).fill(false));
+const EditNoteName = ref([]);
+const UserInput = ref("");
+
+watch(() => userData.courses, (newCourses) => {
+    // 重新映射生成 EditNoteName 的新结构
+    EditNoteName.value = newCourses.map((course) => 
+        new Array(course.myNotes ? course.myNotes.length : 0).fill(false)
+    );
+    // console.log("EditNoteName initialized:", EditNoteName.value);
+}, { 
+    immediate: true, // 确保组件加载时立即执行一次初始化
+    deep: true // 可选，如果 myNotes 列表本身也会变化，则需要深度监听
+});
 
 function DisplayNotesList(index) {
   // 调整svg旋转状态
@@ -54,7 +68,7 @@ async function DisplayNoteFile(coursename, notename) {
   } else {
     window.alert("该笔记暂无文件内容");
   }
-  
+
 }
 
 const SearchHandler = (event) => {
@@ -89,56 +103,51 @@ const SearchHandler = (event) => {
   });
 };
 
-function EditHandler(coursename) {
-  window.alert("编辑课程: " + coursename + " 功能尚未实现");
 
+
+function Del_Course(Coursename) {
+  window.alert("删除课程: " + Coursename);
 }
-
 
 
 </script>
 
 <template>
   <div id="search-bar" class="mb-4">
-    <input
-      type="text"
-      placeholder="搜索笔记..."
-      class="w-full p-2 border rounded-lg"
-      id="searchinput"
-      @input="SearchHandler"
-    />
+    <input type="text" placeholder="搜索笔记..." class="w-full p-2 border rounded-lg" id="searchinput"
+      @input="SearchHandler" />
   </div>
 
-  <div
-    id="main-content-wrapper"
-    class="relative"
-    :class="{ 'flex h-[calc(100vh-80px)] space-x-4': fileview }"
-  >
-    <div
-      id="show-case"
-      :class="{
-        'overflow-y-auto': true /* 确保列表内容可滚动 */,
-      }"
-      class="w-full"
-    >
+  <div id="main-content-wrapper" class="relative" :class="{ 'flex h-[calc(100vh-80px)] space-x-4': fileview }">
+    <div id="show-case" :class="{
+      'overflow-y-auto': true /* 确保列表内容可滚动 */,
+    }" class="w-full">
       <div id="Notes">
-        <div
-          v-for="(course, index) in userData.courses"
-          :key="index"
-          class="course-item p-2 bg-white shadow-sm mb-2"
-        >
+        <div v-for="(course, index) in userData.courses" :key="index" class="course-item p-2 bg-white shadow-sm mb-2">
           <div class="px-4 py-2 flex justify-between items-center border-b">
             <div class="flex items-center flex-wrap">
-              <h2 class="text-xl font-semibold inline-block mr-4">
-                {{ course.name }}
-              </h2>
+              <div class="CourseNameContainer">
+                <span v-if="!EditCourseName[index]" class="text-lg font-semibold text-gray-800 mr-4" @dblclick="() => {
+                  EditCourseName[index] = true
+                  UserInput = course.name
+                }">
+                  {{ course.name }}
+                </span>
+                <input v-else ref="EditCourseName[index]" type="text" class="border border-gray-300 rounded px-2 py-1"
+                  v-model="UserInput" @keyup.enter="EditCourseName[index] = false" @blur="() => {
+                    // console.log('课程名修改为: ', UserInput);
+                    EditCourseName[index] = false;
+                    EditCourse({userId: userData.userId, oldName: course.name, newName: UserInput});
+                    userData.courses[index].name = UserInput;
+                    UserInput = '';
+                  }">
+                </input>
+              </div>
+
 
               <div class="tags inline-block">
-                <span
-                  v-for="(tag, tagIndex) in course.tags"
-                  :key="tagIndex"
-                  class="inline-block bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mb-1"
-                >
+                <span v-for="(tag, tagIndex) in course.tags" :key="tagIndex"
+                  class="inline-block bg-blue-200 text-blue-800 text-xs px-2 py-1 rounded-full mr-2 mb-1">
                   {{ tag }}
                 </span>
               </div>
@@ -146,80 +155,62 @@ function EditHandler(coursename) {
 
             <div class="flex items-center space-x-2">
               <button class="p-1" @click="DisplayNotesList(index)">
-                <svg
-                  :id="'icon-' + index"
-                  class="w-5 h-5 text-gray-600 transition-transform duration-300 rotate-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M19 9l-7 7-7-7"
-                  ></path>
+                <svg :id="'icon-' + index" class="w-5 h-5 text-gray-600 transition-transform duration-300 rotate-0"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
                 </svg>
               </button>
 
-              <button class="p-1" @click="EditHandler(course.name)">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="w-5 h-5 text-gray-600 icon icon-tabler icon-tabler-edit"
-                >
-                  <path stroke="none" d="M0 0h24h24z" />
-                  <path
-                    d="M7 7h-1a2 2 0 0 0 -2 2v9a2 2 0 0 0 2 2h9a2 2 0 0 0 2 -2v-1"
-                  />
-                  <path
-                    d="M20.385 6.585a2.1 2.1 0 0 0 -2.97 -2.97l-8.415 8.415v3h3l8.415 -8.415z"
-                  />
-                  <path d="M16 5l3 3" />
-                </svg>
+
+
+              <button class="p-1" @click="Del_Course">
+                <img src="@/assets/trash.svg" class="h-5">
+                </img>
               </button>
+
+
             </div>
           </div>
 
-          <div
-            class="notes-list max-h-48 hidden overflow-y-auto"
-            :id="'notes-list-' + index"
-          >
-            <p
-              v-if="!course.myNotes || course.myNotes.length === 0"
-              class="text-sm text-gray-500 italic px-4 py-2"
-            >
+          <div class="notes-list max-h-48 hidden overflow-y-auto" :id="'notes-list-' + index">
+            <p v-if="!course.myNotes || course.myNotes.length === 0" class="text-sm text-gray-500 italic px-4 py-2">
               暂无详细笔记内容。
             </p>
 
             <ul v-else class="space-y-1 p-2">
-              <li
-                v-for="(note, noteIndex) in course.myNotes"
-                :key="noteIndex"
-                class="flex items-center text-sm text-gray-700 py-2 px-3 hover:bg-indigo-50 hover:text-indigo-800 rounded-lg transition duration-150 cursor-pointer"
-              >
-                <svg
-                  class="w-3 h-3 mr-2 text-indigo-400 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
-                  <path
-                    fill-rule="evenodd"
+              <li v-for="(note, noteIndex) in course.myNotes" :key="noteIndex"
+                class="flex items-center text-sm text-gray-700 py-2 px-3 hover:bg-indigo-50 hover:text-indigo-800 rounded-lg transition duration-150 cursor-pointer">
+                <svg class="w-3 h-3 mr-2 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"
+                  xmlns="http://www.w3.org/2000/svg">
+                  <path fill-rule="evenodd"
                     d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clip-rule="evenodd"
-                  ></path>
+                    clip-rule="evenodd"></path>
                 </svg>
 
-                <span @click="DisplayNoteFile(course.name, note.name)">
-                  {{ note.name }}
+                <span class="flex items-center w-full">
+                  <span v-if="!EditNoteName[index][noteIndex]"
+                    @click="DisplayNoteFile(course.name, note.name)" 
+                    class="text-base content-center flex-1">
+                    {{ note.name }}
+                  </span>
+                  <input v-else ref="EditNotName[index][noteIndex]" type="text" class="border border-gray-300 rounded px-2 py-1 flex-1"
+                    v-model="UserInput" @keyup.enter="EditNoteName[index][noteIndex] = false" @blur="() => {
+                      Edit[index][noteIndex] = false;
+                      EditNote({userId: userData.userId, lessonName: course.name, oldName: note.name, newName: UserInput});
+                      userData.courses[index].myNotes[noteIndex].name = UserInput;
+                      UserInput = '';
+                    }">
+                  </input>
+                </input>
+                  <button class="p-1" @click="() => {
+                    EditNoteName[index][noteIndex] = !EditNoteName[index][noteIndex]
+                    UserInput = note.name
+                  }">
+                    <img src="@/assets/edit.svg" class="h-5">
+                    </img>
+                  </button>
                 </span>
+
               </li>
             </ul>
           </div>

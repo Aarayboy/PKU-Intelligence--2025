@@ -378,6 +378,12 @@ def cloud_status():
             'error': f'处理过程中发生错误: {str(e)}'
         }), 500
 
+
+
+
+
+
+
 if __name__ == '__main__':
     # Run on port 4000
     app.run(host='0.0.0.0', port=4000, debug=True)

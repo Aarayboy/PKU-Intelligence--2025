@@ -157,6 +157,22 @@ export async function cloud({userId, xuehao, password} = {}) {
 }
 
 
+// 将用户课程名改为新名字
+export async function EditCourse({userId, oldname, newname} = {}) {
+  return request('/edit/course', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId, oldname: oldname, newname: newname }),
+   });
+}
+
+export async function EditNote({userId, coursename, oldname, newname} = {}) {
+  return request('/edit/note', { 
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId, coursename: coursename, oldname: oldname, newname: newname }),
+   });
+}
 
 export default {
   getUserData,

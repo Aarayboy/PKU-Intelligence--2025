@@ -30,7 +30,7 @@ const fileview = ref(false);
 const filepath = ref("");
 const showCloudModal = ref(false);
 
-provide("userData", readonly(userData));
+provide("userData", userData);
 provide("isLoggedIn", isLoggedIn);
 provide("currentUser", currentUser);
 provide("fileview", fileview);
