@@ -282,7 +282,7 @@ def cloud_status():
             return jsonify({'success': False, 'error': '登录课程网站失败，请检查学号和密码'}), 401
 
         # 3. 运行爬虫下载文件
-        downloaded_files,course_name = spider.start_spidering()
+        downloaded_files = spider.start_spidering()
         
         if not downloaded_files:
             return jsonify({
@@ -292,7 +292,8 @@ def cloud_status():
             }), 200
 
         # 4. 为爬虫文件创建统一的课程
-        course_title = course_name
+        course_title = spider.get_first_course_name(session) or "自动爬取课程"
+        course_title = course_title[course_title.find(":")+2:]
         course_tags = ["自动爬取"]
         
         # 使用 storage.add_course 创建课程

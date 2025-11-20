@@ -4,7 +4,7 @@ import os
 import re
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
-import login
+from . import login
 from pathlib import Path
 
 CURRENT_SEMESTER_LABEL = os.getenv("CURRENT_SEMESTER_LABEL", "25-26学年第1学期") # 手动指定“本学期”的标记
@@ -181,6 +181,17 @@ def get_course_content_pages(session, course):
     print(f"  课程 {course_id} - {course['name']} 发现 {len(content_pages)} 个 listContent.jsp 内容页。")
     return list(content_pages)
 
+def get_first_course_name(session):
+    """
+    调用 get_all_courses(session)，返回第一门课程的名称字符串。
+    如果当前账号没有课程，返回空字符串 ""。
+    """
+    courses = get_all_courses(session)
+
+    # courses 是一个列表，每个元素形如：
+    # { "name": "...", "course_id": "...", "launcher_url": "..." }
+    first_course = courses[0]
+    return first_course.get("name", "")
 
 
 def start_spidering():
