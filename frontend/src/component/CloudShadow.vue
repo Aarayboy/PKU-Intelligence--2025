@@ -1,23 +1,23 @@
 <script setup>
-import { ref, reactive } from 'vue';
-import api from '@/api';
-const props = defineProps(['visible', 'userId']);
-const emit = defineEmits(['close', 'showNotification', 'hasCloud']);
+import { ref, reactive } from "vue";
+import api from "@/api";
+const props = defineProps(["visible", "userId"]);
+const emit = defineEmits(["close", "showNotification", "hasCloud"]);
 const choseCourse = ref(false);
 const cloudCourses = ref([]);
 
 const formData = reactive({
-  xuehao: '',
-  password: '',
+  xuehao: "",
+  password: "",
   userId: props.userId,
-  course: '',
+  course: "",
 });
 
 // 关闭窗口
 const closeWindow = () => {
   // 重置表单
   resetForm();
-  emit('close');
+  emit("close");
 };
 
 const isSubmitting = ref(false);
@@ -26,11 +26,11 @@ const isSubmitting = ref(false);
 const handleSubmit = async () => {
   if (isSubmitting.value) return;
   if (!formData.xuehao.trim()) {
-    emit('showNotification', '请输入学号', '学号不能为空', false);
+    emit("showNotification", "请输入学号", "学号不能为空", false);
     return;
   }
   if (!formData.password.trim()) {
-    emit('showNotification', '请输入密码', '密码不能为空', false);
+    emit("showNotification", "请输入密码", "密码不能为空", false);
     return;
   }
   isSubmitting.value = true;
@@ -41,7 +41,7 @@ const handleSubmit = async () => {
     course: formData.course,
   };
   if (!choseCourse.value) {
-    payload.course = '';
+    payload.course = "";
   }
   try {
     // 上传到后端并使用后端返回的数据
@@ -51,10 +51,10 @@ const handleSubmit = async () => {
     if (!choseCourse.value && res.courses && res.courses.length > 0) {
       choseCourse.value = true;
       emit(
-        'showNotification',
-        '请选择课程',
-        '请从下拉菜单中选择课程后再次点击同步课程',
-        true
+        "showNotification",
+        "请选择课程",
+        "请从下拉菜单中选择课程后再次点击同步课程",
+        true,
       );
       cloudCourses.value = [];
       for (const course of res.courses) {
@@ -62,16 +62,16 @@ const handleSubmit = async () => {
       }
     } else {
       choseCourse.value = false;
-      emit('hasCloud');
-      emit('showNotification', '成功', Isok, true);
+      emit("hasCloud");
+      emit("showNotification", "成功", Isok, true);
       closeWindow();
     }
   } catch (err) {
     emit(
-      'showNotification',
-      '同步失败',
-      err?.message || '同步失败，请稍后重试',
-      false
+      "showNotification",
+      "同步失败",
+      err?.message || "同步失败，请稍后重试",
+      false,
     );
   } finally {
     isSubmitting.value = false;
@@ -90,9 +90,9 @@ const upToServer = async (data) => {
 
 // 重置表单
 const resetForm = () => {
-  formData.xuehao = '';
-  formData.password = '';
-  formData.course = '';
+  formData.xuehao = "";
+  formData.password = "";
+  formData.course = "";
 };
 </script>
 <template>
@@ -184,7 +184,7 @@ const resetForm = () => {
                 isSubmitting ? 'fa-spinner fa-spin mr-2' : 'fa-check mr-2'
               "
             ></i>
-            {{ isSubmitting ? '同步中…' : '同步课程' }}
+            {{ isSubmitting ? "同步中…" : "同步课程" }}
           </button>
         </div>
       </form>

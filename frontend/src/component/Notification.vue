@@ -1,24 +1,24 @@
 <script setup>
-import { ref, toRef, watchEffect } from 'vue';
-const props = defineProps(['visible', 'title', 'message', 'success']);
-const emit = defineEmits(['close']);
+import { ref, toRef, watchEffect } from "vue";
+const props = defineProps(["visible", "title", "message", "success"]);
+const emit = defineEmits(["close"]);
 
-const showNotificationFlag = toRef(props, 'visible');
-const notificationTitle = toRef(props, 'title');
-const notificationMessage = toRef(props, 'message');
-const isSuccess = toRef(props, 'success');
-const notificationIconClass = ref('');
-const notificationIcon = ref('');
+const showNotificationFlag = toRef(props, "visible");
+const notificationTitle = toRef(props, "title");
+const notificationMessage = toRef(props, "message");
+const isSuccess = toRef(props, "success");
+const notificationIconClass = ref("");
+const notificationIcon = ref("");
 
 watchEffect(() => {
   if (isSuccess.value) {
     notificationIconClass.value =
-      'w-6 h-6 rounded-full bg-success/20 flex items-center justify-center text-success mr-3 mt-0.5';
-    notificationIcon.value = 'fa fa-check';
+      "w-6 h-6 rounded-full bg-success/20 flex items-center justify-center text-success mr-3 mt-0.5";
+    notificationIcon.value = "fa fa-check";
   } else {
     notificationIconClass.value =
-      'w-6 h-6 rounded-full bg-error/20 flex items-center justify-center text-error mr-3 mt-0.5';
-    notificationIcon.value = 'fa fa-exclamation';
+      "w-6 h-6 rounded-full bg-error/20 flex items-center justify-center text-error mr-3 mt-0.5";
+    notificationIcon.value = "fa fa-exclamation";
   }
 });
 </script>

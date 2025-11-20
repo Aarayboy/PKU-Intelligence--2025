@@ -1,5 +1,5 @@
 <script setup>
-const emit = defineEmits(['logout', 'cloud']);
+const emit = defineEmits(["logout", "cloud"]);
 </script>
 <template>
   <div class="bg-white shadow-md">

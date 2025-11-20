@@ -88,20 +88,20 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed } from 'vue';
+import { ref, reactive, computed } from "vue";
 
 const props = defineProps({
   visible: Boolean,
 });
 
-const emit = defineEmits(['close', 'register', 'switch-to-login']);
+const emit = defineEmits(["close", "register", "switch-to-login"]);
 
 const loading = ref(false);
 const formData = reactive({
-  username: '',
-  email: '',
-  password: '',
-  confirmPassword: '',
+  username: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
 });
 
 const passwordsMatch = computed(() => {
@@ -121,7 +121,7 @@ const handleSubmit = async () => {
   // 模拟网络请求延迟
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  emit('register', {
+  emit("register", {
     username: formData.username,
     email: formData.email,
     password: formData.password,
@@ -130,15 +130,15 @@ const handleSubmit = async () => {
   loading.value = false;
 
   // 清空表单
-  formData.username = '';
-  formData.email = '';
-  formData.password = '';
-  formData.confirmPassword = '';
+  formData.username = "";
+  formData.email = "";
+  formData.password = "";
+  formData.confirmPassword = "";
 };
 
 const handleOverlayClick = (event) => {
-  if (event.target.classList.contains('modal-overlay')) {
-    emit('close');
+  if (event.target.classList.contains("modal-overlay")) {
+    emit("close");
   }
 };
 </script>

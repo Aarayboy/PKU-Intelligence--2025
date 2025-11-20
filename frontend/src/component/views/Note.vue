@@ -1,47 +1,47 @@
 <script setup>
-import { Edit, User } from 'lucide-react';
-import api, { EditNote } from '@/api';
-import { ref, reactive, inject, watch } from 'vue';
-const userData = inject('userData');
-const fileview = inject('fileview');
-const filepath = inject('filepath');
+import { Edit, User } from "lucide-react";
+import api, { EditNote } from "@/api";
+import { ref, reactive, inject, watch } from "vue";
+const userData = inject("userData");
+const fileview = inject("fileview");
+const filepath = inject("filepath");
 const searchinput = ref(null);
 const EditCourseName = ref(new Array(userData.courses.length).fill(false));
 const EditNoteName = ref([]);
-const UserInput = ref('');
+const UserInput = ref("");
 
 watch(
   () => userData.courses,
   (newCourses) => {
     // 重新映射生成 EditNoteName 的新结构
     EditNoteName.value = newCourses.map((course) =>
-      new Array(course.myNotes ? course.myNotes.length : 0).fill(false)
+      new Array(course.myNotes ? course.myNotes.length : 0).fill(false),
     );
     // console.log("EditNoteName initialized:", EditNoteName.value);
   },
   {
     immediate: true, // 确保组件加载时立即执行一次初始化
     deep: true, // 可选，如果 myNotes 列表本身也会变化，则需要深度监听
-  }
+  },
 );
 
 function DisplayNotesList(index) {
   // 调整svg旋转状态
   const icon = document.getElementById(`icon-${index}`);
-  if (icon.classList.contains('rotate-180')) {
-    icon.classList.remove('rotate-180');
-    icon.classList.add('rotate-0');
+  if (icon.classList.contains("rotate-180")) {
+    icon.classList.remove("rotate-180");
+    icon.classList.add("rotate-0");
   } else {
-    icon.classList.remove('rotate-0');
-    icon.classList.add('rotate-180');
+    icon.classList.remove("rotate-0");
+    icon.classList.add("rotate-180");
   }
 
   // FIX: 使用 .value 访问 ref
   const notesList = document.getElementById(`notes-list-${index}`);
-  if (notesList.classList.contains('hidden')) {
-    notesList.classList.remove('hidden');
+  if (notesList.classList.contains("hidden")) {
+    notesList.classList.remove("hidden");
   } else {
-    notesList.classList.add('hidden');
+    notesList.classList.add("hidden");
   }
 }
 
@@ -58,7 +58,7 @@ async function DisplayNoteFile(coursename, notename) {
       noteName: notename,
     })
     .then((res) => {
-      window.console.log('获取到的文件列表: ', res);
+      window.console.log("获取到的文件列表: ", res);
       if (res && res.files && res.files.length > 0) {
         return res.files[0].url; // 假设返回的文件对象中有 url 字段
       } else {
@@ -66,7 +66,7 @@ async function DisplayNoteFile(coursename, notename) {
       }
     })
     .catch((err) => {
-      window.console.error('获取文件路径出错: ', err);
+      window.console.error("获取文件路径出错: ", err);
       return null;
     });
   // window.console.log("文件路径: ", Filepath);
@@ -77,7 +77,7 @@ async function DisplayNoteFile(coursename, notename) {
     filepath.value = Filepath;
     // window.alert('正在预览文件: ' + Filepath);
   } else {
-    window.alert('该笔记暂无文件内容');
+    window.alert("该笔记暂无文件内容");
   }
 }
 
@@ -100,13 +100,13 @@ const SearchHandler = (event) => {
     }
 
     // 显示或隐藏课程项
-    const courseElements = document.getElementsByClassName('course-item');
+    const courseElements = document.getElementsByClassName("course-item");
     for (let elem of courseElements) {
-      if (elem.querySelector('.course-name').textContent === course.name) {
-        if (courseMatch || notesMatch || query === '') {
-          elem.style.display = '';
+      if (elem.querySelector(".course-name").textContent === course.name) {
+        if (courseMatch || notesMatch || query === "") {
+          elem.style.display = "";
         } else {
-          elem.style.display = 'none';
+          elem.style.display = "none";
         }
       }
     }
@@ -114,7 +114,7 @@ const SearchHandler = (event) => {
 };
 
 function Del_Course(Coursename) {
-  window.alert('删除课程: ' + Coursename);
+  window.alert("删除课程: " + Coursename);
 }
 </script>
 
@@ -181,7 +181,7 @@ function Del_Course(Coursename) {
                       userData.courses[index].name = UserInput;
                       console.log(
                         '课程名已更新为: ',
-                        userData.courses[index].name
+                        userData.courses[index].name,
                       );
                       UserInput = '';
                     }

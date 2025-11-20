@@ -1,33 +1,33 @@
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive } from "vue";
 
-const props = defineProps(['visible', 'userId']);
-const emit = defineEmits(['close', 'showNotification', 'course-saved']);
+const props = defineProps(["visible", "userId"]);
+const emit = defineEmits(["close", "showNotification", "course-saved"]);
 
 // 表单数据
 const formData = reactive({
-  title: '',
+  title: "",
 });
 
 // 标签相关
 const tags = ref([]);
-const newTag = ref('');
+const newTag = ref("");
 
 // 关闭窗口
 const closeWindow = () => {
   // 重置表单
   resetForm();
-  emit('close');
+  emit("close");
 };
 
 // 添加标签
 const addTag = () => {
   if (newTag.value.trim() && tags.value.length < 5) {
     tags.value.push(newTag.value.trim());
-    newTag.value = '';
+    newTag.value = "";
   } else if (tags.value.length >= 5) {
     // 通过父组件的事件通知，而不是直接调用不存在的函数
-    emit('showNotification', '标签数量限制', '最多只能添加5个标签', false);
+    emit("showNotification", "标签数量限制", "最多只能添加5个标签", false);
   }
 };
 
@@ -39,13 +39,13 @@ const removeTag = (index) => {
 // 上传中的状态，避免重复提交
 const isSubmitting = ref(false);
 
-import api from '../api';
+import api from "../api";
 
 // 使用集中化的 API 模块创建课程
 // payload: { title, tags }
 const upToServer = async (data) => {
   return api.createCourse({
-    title: data?.title ?? '',
+    title: data?.title ?? "",
     tags: data?.tags ?? [],
     userId: props.userId,
   });
@@ -55,7 +55,7 @@ const upToServer = async (data) => {
 const handleSubmit = async () => {
   if (isSubmitting.value) return;
   if (!formData.title.trim()) {
-    emit('showNotification', '请输入课程名称', '课程名称不能为空', false);
+    emit("showNotification", "请输入课程名称", "课程名称不能为空", false);
     return;
   }
   isSubmitting.value = true;
@@ -68,18 +68,18 @@ const handleSubmit = async () => {
     const res = await upToServer(payload);
     const created = res?.course || res;
     // 通知父组件新增课程，优先使用后端返回的数据字段
-    emit('course-saved', {
+    emit("course-saved", {
       name: created?.name || payload.title,
       tags: created?.tags || payload.tags,
     });
-    emit('showNotification', '成功', '课程已创建！', true);
+    emit("showNotification", "成功", "课程已创建！", true);
     closeWindow();
   } catch (err) {
     emit(
-      'showNotification',
-      '上传失败',
-      err?.message || '创建课程失败，请稍后重试',
-      false
+      "showNotification",
+      "上传失败",
+      err?.message || "创建课程失败，请稍后重试",
+      false,
     );
   } finally {
     isSubmitting.value = false;
@@ -88,7 +88,7 @@ const handleSubmit = async () => {
 
 // 重置表单
 const resetForm = () => {
-  formData.title = '';
+  formData.title = "";
   tags.value = [];
 };
 </script>
@@ -176,7 +176,7 @@ const resetForm = () => {
                 isSubmitting ? 'fa-spinner fa-spin mr-2' : 'fa-check mr-2'
               "
             ></i>
-            {{ isSubmitting ? '保存中…' : '保存课程' }}
+            {{ isSubmitting ? "保存中…" : "保存课程" }}
           </button>
         </div>
       </form>

@@ -48,18 +48,18 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive } from "vue";
 
 const props = defineProps({
   visible: Boolean,
 });
 
-const emit = defineEmits(['close', 'login', 'switch-to-register']);
+const emit = defineEmits(["close", "login", "switch-to-register"]);
 
 const loading = ref(false);
 const formData = reactive({
-  username: '',
-  password: '',
+  username: "",
+  password: "",
 });
 
 const handleSubmit = async () => {
@@ -72,17 +72,17 @@ const handleSubmit = async () => {
   // 模拟网络请求延迟
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  emit('login', { ...formData });
+  emit("login", { ...formData });
   loading.value = false;
 
   // 清空表单
-  formData.username = '';
-  formData.password = '';
+  formData.username = "";
+  formData.password = "";
 };
 
 const handleOverlayClick = (event) => {
-  if (event.target.classList.contains('modal-overlay')) {
-    emit('close');
+  if (event.target.classList.contains("modal-overlay")) {
+    emit("close");
   }
 };
 </script>

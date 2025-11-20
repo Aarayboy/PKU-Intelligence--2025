@@ -1,15 +1,15 @@
 <script setup>
-import { inject, ref } from 'vue';
+import { inject, ref } from "vue";
 
-import Note from './views/Note.vue';
-import Links from './views/Links.vue';
-import Tasks from './views/Tasks.vue';
-import Courses from './views/Courses.vue';
+import Note from "./views/Note.vue";
+import Links from "./views/Links.vue";
+import Tasks from "./views/Tasks.vue";
+import Courses from "./views/Courses.vue";
 
-defineEmits(['NewNote', 'NewCourse']);
-const fileview = inject('fileview');
+defineEmits(["NewNote", "NewCourse"]);
+const fileview = inject("fileview");
 
-const currentTab = ref('Note');
+const currentTab = ref("Note");
 
 const tabs = {
   Note,
@@ -19,10 +19,10 @@ const tabs = {
 };
 
 const tabsName = {
-  Note: '笔记管理',
-  Links: '常用链接',
-  Tasks: '任务管理',
-  Courses: '课程管理',
+  Note: "笔记管理",
+  Links: "常用链接",
+  Tasks: "任务管理",
+  Courses: "课程管理",
 };
 </script>
 <template>

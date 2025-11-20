@@ -355,7 +355,7 @@ def cloud_status():
 
         # 使用 storage.add_course 创建课程
         course_title = _courses[course - 1]["name"]
-        course_tags = ["课程文件"]
+        course_tags = ["课程文件", "教学内容"]
         course = storage.add_course(course_title, course_tags, userId)
         if not course:
             print(f"课程 '{course_title}' 可能已存在")

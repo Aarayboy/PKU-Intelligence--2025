@@ -1,9 +1,9 @@
-import { ref } from 'vue';
+import { ref } from "vue";
 
 const notificationData = ref({
   visible: false,
-  title: '',
-  message: '',
+  title: "",
+  message: "",
   success: true,
 });
 

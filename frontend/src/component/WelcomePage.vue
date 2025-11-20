@@ -60,15 +60,15 @@
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive } from "vue";
 
 // 定义组件触发的事件
-const emit = defineEmits(['show-login', 'show-register', 'login']);
+const emit = defineEmits(["show-login", "show-register", "login"]);
 
 const loading = ref(false);
 const formData = reactive({
-  username: '',
-  password: '',
+  username: "",
+  password: "",
 });
 
 const handleSubmit = async () => {
@@ -82,12 +82,12 @@ const handleSubmit = async () => {
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   // 触发登录事件，将表单数据传递给父组件
-  emit('login', { ...formData });
+  emit("login", { ...formData });
   loading.value = false;
 
   // 清空表单
-  formData.username = '';
-  formData.password = '';
+  formData.username = "";
+  formData.password = "";
 };
 </script>
 
@@ -139,7 +139,7 @@ const handleSubmit = async () => {
   margin-bottom: 1rem;
   font-weight: 300;
   color: #333; /* 深色文字与白色背景对比 */
-  font-family: 'Times New Roman', Times, serif; /* 设置Times New Roman字体 */
+  font-family: "Times New Roman", Times, serif; /* 设置Times New Roman字体 */
 }
 
 .slogan p {
