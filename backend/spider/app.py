@@ -1,4 +1,5 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
+import sync_schedule
 from . import spider # 导入爬虫模块
 
 app = Flask(__name__)
@@ -35,6 +36,19 @@ def handle_spider_request(): # 请求到达时调用
             "message": "爬虫执行过程中发生内部错误。",
             "error": str(e)
         }), 500
+
+@app.route("/sync", methods=["POST"])
+def sync_route():
+    payload = request.get_json()
+    username = payload.get("username")
+    password = payload.get("password")
+
+    ok, data = sync_schedule(username, password)
+    if not ok:
+        return jsonify(success=False, message=data)
+
+    # 这里你可以只返回 grid，也可以两个都返回
+    return jsonify(success=True, schedule=data["grid"], course_list=data["course_list"])
 
 if __name__ == '__main__':
     # 运行 Flask app
