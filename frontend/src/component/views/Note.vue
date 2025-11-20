@@ -102,7 +102,7 @@ const SearchHandler = (event) => {
     // 显示或隐藏课程项
     const courseElements = document.getElementsByClassName('course-item');
     for (let elem of courseElements) {
-      if (elem.querySelector('h2').innerText === course.name) {
+      if (elem.querySelector('.course-name').textContent === course.name) {
         if (courseMatch || notesMatch || query === '') {
           elem.style.display = '';
         } else {
@@ -152,7 +152,7 @@ function Del_Course(Coursename) {
               <div class="CourseNameContainer">
                 <span
                   v-if="!EditCourseName[index]"
-                  class="text-lg font-semibold text-gray-800 mr-4"
+                  class="text-lg font-semibold text-gray-800 mr-4 course-name"
                   @dblclick="
                     () => {
                       EditCourseName[index] = true;
