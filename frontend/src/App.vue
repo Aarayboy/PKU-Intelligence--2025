@@ -1,45 +1,39 @@
 <script setup>
-import { ref, onMounted, provide, readonly } from "vue";
-import Banner from "./component/Banner.vue";
-import NavAndMain from "./component/NavAndMain.vue";
-import ClassShadow from "./component/ClassShadow.vue";
-import NoteShadow from "./component/NoteShadow.vue";
-import Notification from "./component/Notification.vue";
-import RegisterModal from "./component/RegisterModal.vue";
-import WelcomePage from "./component/WelcomePage.vue";
-import CloudShadow from "./component/CloudShadow.vue";
+import { ref, onMounted, provide, readonly } from 'vue';
+import Banner from './component/Banner.vue';
+import NavAndMain from './component/NavAndMain.vue';
+import ClassShadow from './component/ClassShadow.vue';
+import NoteShadow from './component/NoteShadow.vue';
+import Notification from './component/Notification.vue';
+import RegisterModal from './component/RegisterModal.vue';
+import WelcomePage from './component/WelcomePage.vue';
+import CloudShadow from './component/CloudShadow.vue';
 
-import { useAuth } from "./composables/useAuth";
-import { useUserData } from "./composables/useUserData";
-import { useNotification } from "./composables/useNotification";
+import { useAuth } from './composables/useAuth';
+import { useUserData } from './composables/useUserData';
+import { useNotification } from './composables/useNotification';
 
-const {
-  isLoggedIn,
-  currentUser,
-  showRegisterModal,
-  login,
-  register,
-  logout,
-} = useAuth();
+const { isLoggedIn, currentUser, showRegisterModal, login, register, logout } =
+  useAuth();
 const { userData, loadUserData } = useUserData();
 const { notificationData, setNotification } = useNotification();
 
 const showNewCourseModal = ref(false);
 const showNewNoteModal = ref(false);
 const fileview = ref(false);
-const filepath = ref("");
+const filepath = ref('');
 const showCloudModal = ref(false);
 
-provide("userData", readonly(userData));
-provide("isLoggedIn", isLoggedIn);
-provide("currentUser", currentUser);
-provide("fileview", fileview);
-provide("filepath", filepath);
+provide('userData', userData);
+provide('isLoggedIn', isLoggedIn);
+provide('currentUser', currentUser);
+provide('fileview', fileview);
+provide('filepath', filepath);
 
 onMounted(() => {
-  const savedUser = localStorage.getItem("currentUser");
-  const savedLoginState = localStorage.getItem("isLoggedIn");
-  if (savedUser && savedLoginState === "true") {
+  const savedUser = localStorage.getItem('currentUser');
+  const savedLoginState = localStorage.getItem('isLoggedIn');
+  if (savedUser && savedLoginState === 'true') {
     try {
       currentUser.value = JSON.parse(savedUser);
       isLoggedIn.value = true;
@@ -63,9 +57,9 @@ async function handleLogin(loginData) {
   try {
     const user = await login(loginData);
     await loadUserData(user.id, setNotification);
-    setNotification("登录成功", `欢迎回来，${user.username}`, true);
+    setNotification('登录成功', `欢迎回来，${user.username}`, true);
   } catch (err) {
-    setNotification("登录失败", err?.message || "用户名或密码错误", false);
+    setNotification('登录失败', err?.message || '用户名或密码错误', false);
   }
 }
 
@@ -73,25 +67,24 @@ async function handleRegister(registerData) {
   try {
     await register(registerData);
     showRegisterModal.value = false;
-    setNotification("注册成功", "请使用新账号登录", true);
+    setNotification('注册成功', '请使用新账号登录', true);
     setTimeout(() => {
       isLoggedIn.value = false;
       currentUser.value = null;
     }, 800);
   } catch (err) {
-    if(err?.code === 409) {
-      setNotification("注册失败", "用户名或邮箱已被使用", false);
+    if (err?.code === 409) {
+      setNotification('注册失败', '用户名或邮箱已被使用', false);
       return;
     }
-    setNotification("注册失败", err?.message || "注册失败，请稍后重试", false);
+    setNotification('注册失败', err?.message || '注册失败，请稍后重试', false);
   }
 }
-
 
 function handleLogout() {
   logout();
   userData.courses.splice(0, userData.courses.length);
-  setNotification("已退出登录", "欢迎再次使用", true);
+  setNotification('已退出登录', '欢迎再次使用', true);
 }
 
 function CloseFileView() {
@@ -115,8 +108,12 @@ function CloseFileView() {
 
   <!-- 主应用内容 -->
   <div v-if="isLoggedIn">
-    <Banner :user="currentUser" @logout="handleLogout" @cloud="() => (showCloudModal = true)" />
-    
+    <Banner
+      :user="currentUser"
+      @logout="handleLogout"
+      @cloud="() => (showCloudModal = true)"
+    />
+
     <div class="flex w-full justify-center">
       <div class="w-full max-w-7xl px-4">
         <CloudShadow
@@ -125,11 +122,11 @@ function CloseFileView() {
           @close="() => (showCloudModal = false)"
           @showNotification="setNotification"
           @hasCloud="
-              () => {
-                // 同步数据后从后端重新加载用户数据以保持一致
-                loadUserData(currentUser?.id);
-              }
-            "
+            () => {
+              // 同步数据后从后端重新加载用户数据以保持一致
+              loadUserData(currentUser?.id);
+            }
+          "
         />
         <ClassShadow
           :visible="showNewCourseModal"
@@ -191,9 +188,6 @@ function CloseFileView() {
             </svg>
           </button>
         </div>
-
-
-
 
         <iframe
           :src="filepath"

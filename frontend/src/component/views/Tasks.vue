@@ -1,11 +1,7 @@
-<script setup>
-</script>
+<script setup></script>
 
 <template>
-    <div>
-        任务管理界面
-    </div>
+  <div>任务管理界面</div>
 </template>
 
-<style scoped>
-</style>
+<style scoped></style>

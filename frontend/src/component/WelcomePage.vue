@@ -1,16 +1,22 @@
 <template>
   <div class="login-container">
     <!-- 左侧留白区域 -->
-    <div class="left-space"></div>
-    
+    <div class="left-space">
+      <img
+        src="@/assets/WelcomePagePicture.jpg"
+        alt="PKU Intelligence 背景图"
+        class="left-bg-img"
+      />
+    </div>
+
     <!-- 右侧内容区域 -->
     <div class="right-content">
       <!-- 标语区域（居中） -->
       <div class="slogan">
-        <h1>课程笔记管理系统</h1>
-        <p>高效管理你的学习笔记和课程资料</p>
+        <h1>PKU Intelligence</h1>
+        <p>更适合北京大学学生的笔记管理系统</p>
       </div>
-      
+
       <!-- 直接显示登录框 -->
       <div class="login-form-container">
         <form @submit.prevent="handleSubmit" class="login-form">
@@ -22,9 +28,9 @@
               type="text"
               required
               placeholder="请输入用户名或邮箱"
-            >
+            />
           </div>
-          
+
           <div class="form-group">
             <label for="password">密码</label>
             <input
@@ -33,17 +39,18 @@
               type="password"
               required
               placeholder="请输入密码"
-            >
+            />
           </div>
-          
+
           <button type="submit" class="submit-btn" :disabled="loading">
             <span v-if="loading">登录中...</span>
             <span v-else><i class="fa fa-sign-in"></i> 登录</span>
           </button>
         </form>
-        
+
         <div class="form-footer">
-          <p>还没有账号？ 
+          <p>
+            还没有账号？
             <a href="#" @click.prevent="emit('show-register')">立即注册</a>
           </p>
         </div>
@@ -61,23 +68,23 @@ const emit = defineEmits(['show-login', 'show-register', 'login']);
 const loading = ref(false);
 const formData = reactive({
   username: '',
-  password: ''
+  password: '',
 });
 
 const handleSubmit = async () => {
   if (!formData.username || !formData.password) {
     return;
   }
-  
+
   loading.value = true;
-  
+
   // 模拟网络请求延迟
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+
   // 触发登录事件，将表单数据传递给父组件
   emit('login', { ...formData });
   loading.value = false;
-  
+
   // 清空表单
   formData.username = '';
   formData.password = '';
@@ -93,7 +100,22 @@ const handleSubmit = async () => {
 
 /* 左侧留白区域 - 占比50% */
 .left-space {
-  flex: 1; /* 左侧留白占一半宽度 */
+  flex: 1;
+  position: relative; /* 新增：作为图片绝对定位的父容器 */
+  overflow: hidden; /* 新增：隐藏图片超出区域 */
+}
+
+/* 新增：左侧图片的样式 */
+.left-bg-img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 80%;
+  height: 80%;
+  object-fit: cover; /* 关键：让图片等比例铺满容器，裁剪多余部分 */
+  transform: translate(20%, 10%); /* 调整位置使其居中显示 */
+  /* 可选：添加轻微透明度，避免图片遮挡文字（若有） */
+  /* opacity: 0.9; */
 }
 
 /* 右侧内容区域 - 占比50% */
@@ -117,6 +139,7 @@ const handleSubmit = async () => {
   margin-bottom: 1rem;
   font-weight: 300;
   color: #333; /* 深色文字与白色背景对比 */
+  font-family: 'Times New Roman', Times, serif; /* 设置Times New Roman字体 */
 }
 
 .slogan p {
@@ -164,13 +187,13 @@ const handleSubmit = async () => {
 
 .form-group input:focus {
   outline: none;
-  border-color: #4CAF50;
+  border-color: #4caf50;
 }
 
 .submit-btn {
   width: 100%;
   padding: 0.75rem;
-  background: #4CAF50;
+  background: #4caf50;
   color: white;
   border: none;
   border-radius: 6px;
@@ -200,7 +223,7 @@ const handleSubmit = async () => {
 }
 
 .form-footer a {
-  color: #4CAF50;
+  color: #4caf50;
   text-decoration: none;
 }
 
@@ -213,20 +236,20 @@ const handleSubmit = async () => {
   .login-container {
     flex-direction: column; /* 小屏幕下上下布局 */
   }
-  
+
   .left-space {
     height: 100px; /* 左侧留白改为上方留白 */
     flex: none;
   }
-  
+
   .slogan h1 {
     font-size: 2rem;
   }
-  
+
   .slogan p {
     font-size: 1rem;
   }
-  
+
   .login-form-container {
     padding: 1.5rem;
     margin: 1rem;
