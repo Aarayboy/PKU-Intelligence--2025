@@ -2,12 +2,13 @@
 import { ref, onMounted, provide, readonly } from "vue";
 import Banner from "./component/Banner.vue";
 import NavAndMain from "./component/NavAndMain.vue";
-import ClassShadow from "./component/ClassShadow.vue";
-import NoteShadow from "./component/NoteShadow.vue";
+import ClassShadow from "./component/shadows/ClassShadow.vue";
+import NoteShadow from "./component/shadows/NoteShadow.vue";
 import Notification from "./component/Notification.vue";
 import RegisterModal from "./component/RegisterModal.vue";
 import WelcomePage from "./component/WelcomePage.vue";
-import CloudShadow from "./component/CloudShadow.vue";
+import CloudShadow from "./component/shadows/CloudShadow.vue";
+import ddlDetailShadow from "./component/shadows/ddlDetailShadow.vue";
 
 import { useAuth } from "./composables/useAuth";
 import { useUserData } from "./composables/useUserData";
@@ -23,7 +24,41 @@ const showNewNoteModal = ref(false);
 const fileview = ref(false);
 const filepath = ref("");
 const showCloudModal = ref(false);
+const showDdlDetailModal = ref(false);
 
+const DdlIdx = ref(-1);
+
+
+const shadowSelector = () => {
+  if (showCloudModal.value) {
+    return CloudShadow;
+  } else if (showNewCourseModal.value) {
+    return ClassShadow;
+  } else if (showNewNoteModal.value) {
+    return NoteShadow;
+  } else if (showDdlDetailModal.value) {
+    return ddlDetailShadow;
+  } else {
+    return null;
+  }
+};
+
+const closeShadowHandler = () => {
+  showCloudModal.value = false;
+  showNewCourseModal.value = false;
+  showNewNoteModal.value = false;
+  showDdlDetailModal.value = false;
+};
+
+const dataSelector = () => {
+  if (showNewNoteModal.value) {
+    return userData.courses.map((c) => c.name);
+  } else {
+    return [];
+  }
+};
+
+provide("DdlIdx", DdlIdx);
 provide("userData", userData);
 provide("isLoggedIn", isLoggedIn);
 provide("currentUser", currentUser);
@@ -116,46 +151,24 @@ function CloseFileView() {
 
     <div class="flex w-full justify-center">
       <div class="w-full max-w-7xl px-4">
-        <CloudShadow
-          :visible="showCloudModal"
+        <component
+          :is="shadowSelector()"
+          :visible="true"
           :user-id="currentUser?.id"
-          @close="() => (showCloudModal = false)"
+          :data="dataSelector()"
+          @close="closeShadowHandler()"
           @showNotification="setNotification"
-          @hasCloud="
+          @done="
             () => {
               // 同步数据后从后端重新加载用户数据以保持一致
               loadUserData(currentUser?.id);
             }
           "
-        />
-        <ClassShadow
-          :visible="showNewCourseModal"
-          :user-id="currentUser?.id"
-          @close="() => (showNewCourseModal = false)"
-          @showNotification="setNotification"
-          @course-saved="
-            (course) => {
-              // 刷新后端数据以保持一致性
-              loadUserData(currentUser?.id);
-            }
-          "
-        />
-        <NoteShadow
-          :visible="showNewNoteModal"
-          :lesson-lists="userData.courses.map((c) => c.name)"
-          :user-id="currentUser?.id"
-          @close="() => (showNewNoteModal = false)"
-          @showNotification="setNotification"
-          @note-saved="
-            (note) => {
-              // 上传笔记后从后端重新加载用户数据以保持一致
-              loadUserData(currentUser?.id);
-            }
-          "
-        />
+        ></component>
         <NavAndMain
           @NewCourse="showNewCourseModal = true"
           @NewNote="showNewNoteModal = true"
+          @NewTask="showDdlDetailModal = true"
         />
       </div>
 

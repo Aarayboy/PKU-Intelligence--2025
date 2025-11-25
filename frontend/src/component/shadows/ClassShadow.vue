@@ -2,7 +2,7 @@
 import { ref, reactive } from "vue";
 
 const props = defineProps(["visible", "userId"]);
-const emit = defineEmits(["close", "showNotification", "course-saved"]);
+const emit = defineEmits(["close", "showNotification", "done"]);
 
 // 表单数据
 const formData = reactive({
@@ -39,7 +39,7 @@ const removeTag = (index) => {
 // 上传中的状态，避免重复提交
 const isSubmitting = ref(false);
 
-import api from "../api";
+import api from "@/api";
 
 // 使用集中化的 API 模块创建课程
 // payload: { title, tags }
@@ -68,7 +68,7 @@ const handleSubmit = async () => {
     const res = await upToServer(payload);
     const created = res?.course || res;
     // 通知父组件新增课程，优先使用后端返回的数据字段
-    emit("course-saved", {
+    emit("done", {
       name: created?.name || payload.title,
       tags: created?.tags || payload.tags,
     });
