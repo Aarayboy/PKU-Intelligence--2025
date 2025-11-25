@@ -1,58 +1,72 @@
 <template>
-  <div class="login-container">
-    <!-- 左侧留白区域 -->
-    <div class="left-space">
-      <img
-        src="@/assets/WelcomePagePicture.jpg"
-        alt="PKU Intelligence 背景图"
-        class="left-bg-img"
-      />
-    </div>
+  <div class="page-container">
+    <!-- 新增顶部北大红导航栏 -->
+    <header class="pku-header">
+      <div class="header-content">
 
-    <!-- 右侧内容区域 -->
-    <div class="right-content">
-      <!-- 标语区域（居中） -->
-      <div class="slogan">
-        <h1>PKU Intelligence</h1>
-        <p>更适合北京大学学生的笔记管理系统</p>
+        <img src="@/assets/WelcomePageLogo.png" alt="PKU Intelligence Logo" class="header-logo" />
+        <!-- 顶部slogan -->
+        <div class="header-slogan-container">
+          <h1 class="header-slogan">PKU Intelligence</h1>
+        </div>
+      </div>
+    </header>
+
+    <div class="login-container">
+      <!-- 左侧内容区域 -->
+      <div class="left-space">
+        <img
+          src="@/assets/WelcomePagePicture.jpg"
+          alt="PKU Intelligence 背景图"
+          class="left-bg-img"
+        />
       </div>
 
-      <!-- 直接显示登录框 -->
-      <div class="login-form-container">
-        <form @submit.prevent="handleSubmit" class="login-form">
-          <div class="form-group">
-            <label for="username">用户名或邮箱</label>
-            <input
-              id="username"
-              v-model="formData.username"
-              type="text"
-              required
-              placeholder="请输入用户名或邮箱"
-            />
+      <!-- 右侧内容区域 -->
+      <div class="right-content">
+        <!-- 原有标语区域 -->
+        <div class="slogan">
+          <h1>PKU Intelligence</h1>
+          <p>更适合北京大学学生的笔记管理系统</p>
+        </div>
+
+        <!-- 登录框 -->
+        <div class="login-form-container">
+          <form @submit.prevent="handleSubmit" class="login-form">
+            <div class="form-group">
+              <label for="username">用户名或邮箱</label>
+              <input
+                id="username"
+                v-model="formData.username"
+                type="text"
+                required
+                placeholder="请输入用户名或邮箱"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="password">密码</label>
+              <input
+                id="password"
+                v-model="formData.password"
+                type="password"
+                required
+                placeholder="请输入密码"
+              />
+            </div>
+
+            <button type="submit" class="submit-btn" :disabled="loading">
+              <span v-if="loading">登录中...</span>
+              <span v-else><i class="fa fa-sign-in"></i> 登录</span>
+            </button>
+          </form>
+
+          <div class="form-footer">
+            <p>
+              还没有账号？
+              <a href="#" @click.prevent="emit('show-register')">立即注册</a>
+            </p>
           </div>
-
-          <div class="form-group">
-            <label for="password">密码</label>
-            <input
-              id="password"
-              v-model="formData.password"
-              type="password"
-              required
-              placeholder="请输入密码"
-            />
-          </div>
-
-          <button type="submit" class="submit-btn" :disabled="loading">
-            <span v-if="loading">登录中...</span>
-            <span v-else><i class="fa fa-sign-in"></i> 登录</span>
-          </button>
-        </form>
-
-        <div class="form-footer">
-          <p>
-            还没有账号？
-            <a href="#" @click.prevent="emit('show-register')">立即注册</a>
-          </p>
         </div>
       </div>
     </div>
@@ -62,7 +76,6 @@
 <script setup>
 import { ref, reactive } from "vue";
 
-// 定义组件触发的事件
 const emit = defineEmits(["show-login", "show-register", "login"]);
 
 const loading = ref(false);
@@ -77,89 +90,121 @@ const handleSubmit = async () => {
   }
 
   loading.value = true;
-
-  // 模拟网络请求延迟
   await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  // 触发登录事件，将表单数据传递给父组件
   emit("login", { ...formData });
   loading.value = false;
-
-  // 清空表单
   formData.username = "";
   formData.password = "";
 };
 </script>
 
 <style scoped>
-.login-container {
-  min-height: 100vh;
+.page-container {
   display: flex;
-  background: white; /* 整体白色背景 */
+  flex-direction: column;
+  min-height: 100vh;
 }
 
-/* 左侧留白区域 - 占比50% */
-.left-space {
+.pku-header {
+  background-color: #8A0000;
+  color: white;
+  padding: 0.8rem 0;
+  width: 100%;
+}
+
+.header-content {
+  max-width: 1200px;
+  margin: 0 0 0 40px;
+  padding: 0;
+  display: flex; /* 使图片和文字横向排列 */
+  align-items: center; /* 垂直居中对齐 */
+  justify-content: flex-start; /* 水平靠左对齐 */
+  gap: 1rem; /* 图片和文字之间的间距 */
+}
+
+/* 顶部logo图片样式 */
+.header-logo {
+  height: 60px;
+  width: 60px;
+  object-fit: contain;
+}
+
+.header-slogan-container {
+  display: flex; /* 使图片和文字横向排列 */
+  align-items: center; /* 垂直居中对齐 */
+  justify-content: flex-start; /* 水平靠左对齐 */
+  flex-direction: column;
+}
+
+.header-slogan {
+  font-size: 1.5rem;
+  margin: 0 0 0.2rem 0;
+  font-weight: 500;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.login-container {
   flex: 1;
-  position: relative; /* 新增：作为图片绝对定位的父容器 */
-  overflow: hidden; /* 新增：隐藏图片超出区域 */
+  display: flex;
+  background: white;
 }
 
-/* 新增：左侧图片的样式 */
+.left-space {
+  flex: 3 1 0%;
+  position: relative;
+  overflow: hidden;
+}
+
 .left-bg-img {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 10%;
+  left: 10%;
   width: 80%;
   height: 80%;
-  object-fit: cover; /* 关键：让图片等比例铺满容器，裁剪多余部分 */
-  transform: translate(20%, 10%); /* 调整位置使其居中显示 */
-  /* 可选：添加轻微透明度，避免图片遮挡文字（若有） */
-  /* opacity: 0.9; */
+  object-fit: cover;
+  transform: none;
 }
 
-/* 右侧内容区域 - 占比50% */
 .right-content {
-  flex: 1; /* 右侧内容占一半宽度 */
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: 1.5rem 2rem;
+  padding-top: 2rem;
 }
 
-/* 标语区域（居中显示） */
 .slogan {
   text-align: center;
-  margin-bottom: 3rem; /* 与下方登录框保持距离 */
+  margin-bottom: 2rem;
+  padding-top: 0;
 }
 
 .slogan h1 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
   font-weight: 300;
-  color: #333; /* 深色文字与白色背景对比 */
-  font-family: "Times New Roman", Times, serif; /* 设置Times New Roman字体 */
+  color: #333;
+  font-family: "Times New Roman", Times, serif;
 }
 
 .slogan p {
   font-size: 1.2rem;
-  color: #666; /* 灰色文字 */
+  color: #666;
   opacity: 0.9;
 }
 
-/* 登录表单容器样式 */
 .login-form-container {
   text-align: center;
-  padding: 2rem;
+  padding: 2.5rem;
   background: white;
   border-radius: 20px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1); /* 浅灰色阴影增强立体感 */
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   width: 100%;
-  max-width: 400px; /* 限制最大宽度 */
+  max-width: 480px;
 }
 
-/* 登录表单样式 */
 .login-form {
   padding: 1.5rem 0;
 }
@@ -178,10 +223,11 @@ const handleSubmit = async () => {
 
 .form-group input {
   width: 100%;
-  padding: 0.75rem;
+  padding: 1.25rem;
   border: 1px solid #ddd;
-  border-radius: 6px;
-  font-size: 1rem;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  min-height: 48px;
   transition: border-color 0.3s;
 }
 
@@ -192,12 +238,12 @@ const handleSubmit = async () => {
 
 .submit-btn {
   width: 100%;
-  padding: 0.75rem;
+  padding: 1rem;
   background: #4caf50;
   color: white;
   border: none;
   border-radius: 6px;
-  font-size: 1rem;
+  font-size: 1.05rem;
   cursor: pointer;
   transition: background 0.3s;
   display: flex;
@@ -231,15 +277,22 @@ const handleSubmit = async () => {
   text-decoration: underline;
 }
 
-/* 响应式设计 */
 @media (max-width: 768px) {
   .login-container {
-    flex-direction: column; /* 小屏幕下上下布局 */
+    flex-direction: column;
   }
 
   .left-space {
-    height: 100px; /* 左侧留白改为上方留白 */
+    height: 100px;
     flex: none;
+  }
+
+  .header-slogan {
+    font-size: 1.2rem;
+  }
+
+  .header-logo {
+    height: 30px; /* 小屏幕下缩小图片 */
   }
 
   .slogan h1 {
@@ -250,10 +303,26 @@ const handleSubmit = async () => {
     font-size: 1rem;
   }
 
+  .right-content {
+    padding: 1rem;
+    justify-content: center;
+  }
+
   .login-form-container {
     padding: 1.5rem;
     margin: 1rem;
-    width: auto;
+    max-width: 100%;
+  }
+
+  .form-group input {
+    padding: 0.9rem 1rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+
+  .submit-btn {
+    padding: 0.9rem;
+    font-size: 1rem;
   }
 }
 </style>
