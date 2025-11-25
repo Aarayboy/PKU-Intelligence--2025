@@ -6,10 +6,12 @@ import Links from "./views/Links.vue";
 import Tasks from "./views/Tasks.vue";
 import Courses from "./views/Courses.vue";
 
-defineEmits(["NewNote", "NewCourse"]);
+defineEmits(["NewNote", "NewCourse", "NewTask"]);
 const fileview = inject("fileview");
 
 const currentTab = ref("Note");
+
+const ddlIdx = inject("DdlIdx");
 
 const tabs = {
   Note,
@@ -58,11 +60,23 @@ const tabsName = {
           +新建笔记
         </button>
       </div>
+      <div class="flex gap-4" :class="{ hidden: currentTab !== 'Tasks' }">
+        <button
+          class="px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white hover:cursor-pointer transition-all duration-200"
+          @click="
+            () => {
+              ddlIdx = -1;
+              $emit('NewTask');
+            }
+          "
+        >
+          +新建任务
+        </button>
+      </div>
     </div>
-    <component :is="tabs[currentTab]"> </component>
+    <component :is="tabs[currentTab]" @DdlDetail="$emit('NewTask')">
+    </component>
   </div>
 </template>
 
-<style scoped>
-@reference "../style/index.css";
-</style>
+<style scoped></style>

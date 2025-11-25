@@ -231,6 +231,17 @@ export async function EditNote({ userId, coursename, oldname, newname } = {}) {
   });
 }
 
+export async function UpdateDDL({UserId, deadlines}={}) {
+  return request("/edit/deadline", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      UserId: UserId,
+      deadlines: deadlines,
+    }),
+  });
+}
+
 export default {
   getUserData,
   createCourse,
@@ -243,4 +254,5 @@ export default {
   cloud,
   EditCourse,
   EditNote,
+  UpdateDDL,
 };

@@ -20,11 +20,28 @@ class MyCourse {
 class UserData {
   // accept an options object so we can keep backward compatibility and also
   // assign any extra properties that backend may return (e.g. avatar, bio, role)
-  constructor({ courses = [], username = "", userId = null, email = "" } = {}) {
+  constructor({ courses = [], username = "", userId = null, email = "", deadlines = [] } = {}) {
     this.username = username;
     this.userId = userId;
     this.email = email;
     this.courses = courses;
+    this.deadlines = deadlines.map((d) =>
+      new DDL(
+        d?.name ?? "",
+        d?.deadline ?? "",
+        d?.message ?? "",
+        d?.status ?? "",
+      ),
+    );
+  }
+}
+
+class DDL{
+  constructor(name="",deadline="",message="", status=""){
+    this.name=name;
+    this.deadline=deadline;
+    this.message=message;
+    this.status=status;
   }
 }
 
@@ -50,12 +67,23 @@ function mapToUserData(payload) {
       ),
   );
 
+  const deadlines = (body?.deadlines ?? []).map((d) =>
+    new DDL(
+      d?.name ?? "",
+      d?.deadline ?? "",
+      d?.message ?? "",
+      d?.status ?? "",
+    ),
+  );
+
   // Build a user data object that preserves any extra fields from backend
   const userDataObj = {
     courses,
     username: body?.username ?? body?.name ?? "",
     userId: body?.userId ?? body?.id ?? null,
     email: body?.email ?? "",
+    
+    deadlines,
   };
 
   // copy any other top-level properties from body into the userDataObj
@@ -89,6 +117,9 @@ async function loadUserData(userId, setNotification) {
     userData.username = mapped.username;
     userData.userId = userId;
     userData.email = mapped.email;
+
+    userData.deadlines.splice(0, userData.deadlines.length, ...mapped.deadlines);
+
     return userData;
   } catch (err) {
     if (typeof setNotification === "function") {

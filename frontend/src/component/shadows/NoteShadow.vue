@@ -1,6 +1,6 @@
 <script setup>
-const props = defineProps(["visible", "lessonLists", "userId"]);
-const emit = defineEmits(["close", "showNotification", "note-saved"]);
+const props = defineProps(["visible", "data", "userId"]);
+const emit = defineEmits(["close", "showNotification", "done"]);
 import { ref, reactive, toRef, watch } from "vue";
 
 // 表单数据
@@ -19,7 +19,7 @@ const fileError = ref("");
 const selectedLesson = ref("");
 
 // 课程列表来自父组件，保持与 userData 同步
-const lessonList = toRef(props, "lessonLists");
+const lessonList = toRef(props, "data");
 
 // 当课程列表更新时，如果当前选择不在列表中则清空，以保持一致
 watch(lessonList, (newList) => {
@@ -80,7 +80,7 @@ const removeFile = (index) => {
   uploadedFiles.value.splice(index, 1);
 };
 
-import api from "../api";
+import api from "@/api";
 
 // 使用集中化的 API 模块上传到服务器（可被替换为 mock 或不同后端地址）
 // payload: { title, tags, files: File[], lessonName }
@@ -144,7 +144,7 @@ const handleSubmit = async () => {
     const savedFiles = res?.saved_files || [];
     console.log("保存笔记:", saved);
     // 通知父组件新增的笔记，优先使用后端返回的信息
-    emit("note-saved", {
+    emit("done", {
       name: saved?.name || formData.title,
       file:
         savedFiles && savedFiles.length
