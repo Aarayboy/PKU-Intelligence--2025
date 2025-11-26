@@ -1,9 +1,7 @@
 from flask import Flask, jsonify, request
 import sync_schedule
-from . import spider # 导入爬虫模块
 import login
 from flask import Flask, jsonify
-
 import spider  # 导入爬虫模块
 
 app = Flask(__name__)
