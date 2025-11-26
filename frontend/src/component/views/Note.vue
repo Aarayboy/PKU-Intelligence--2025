@@ -2,6 +2,7 @@
 import { Edit, User } from "lucide-react";
 import api, { EditNote } from "@/api";
 import { ref, reactive, inject, watch } from "vue";
+const emit = defineEmits(["DdlDetail"]); // 这行不要管他，我为了消除警告加的
 const userData = inject("userData");
 const fileview = inject("fileview");
 const filepath = inject("filepath");
