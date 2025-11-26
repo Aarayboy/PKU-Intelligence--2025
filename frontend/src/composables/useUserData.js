@@ -1,5 +1,5 @@
-import { reactive } from 'vue';
-import api from '@/api';
+import { reactive } from "vue";
+import api from "@/api";
 
 class MyNote {
   constructor(name, file, lessonName) {
@@ -20,7 +20,7 @@ class MyCourse {
 class UserData {
   // accept an options object so we can keep backward compatibility and also
   // assign any extra properties that backend may return (e.g. avatar, bio, role)
-  constructor({ courses = [], username = '', userId = null, email = ''} = {}) {
+  constructor({ courses = [], username = "", userId = null, email = "" } = {}) {
     this.username = username;
     this.userId = userId;
     this.email = email;
@@ -34,23 +34,28 @@ function mapToUserData(payload) {
   // payload may be the response body or an object like { data: { ... } }
   const body = payload?.data ?? payload ?? {};
 
-  const courses = (body?.courses ?? [])
-    .map((c) => new MyCourse(
-      c?.name ?? '',
-      Array.isArray(c?.tags) ? c.tags : [],
-      (c?.myNotes ?? []).map((n) => new MyNote(
-        n?.name ?? '',
-        n?.file ?? null,
-        n?.lessonName ?? c?.name ?? ''
-      ))
-    ));
+  const courses = (body?.courses ?? []).map(
+    (c) =>
+      new MyCourse(
+        c?.name ?? "",
+        Array.isArray(c?.tags) ? c.tags : [],
+        (c?.myNotes ?? []).map(
+          (n) =>
+            new MyNote(
+              n?.name ?? "",
+              n?.file ?? null,
+              n?.lessonName ?? c?.name ?? "",
+            ),
+        ),
+      ),
+  );
 
   // Build a user data object that preserves any extra fields from backend
   const userDataObj = {
     courses,
-    username: body?.username ?? body?.name ?? '',
+    username: body?.username ?? body?.name ?? "",
     userId: body?.userId ?? body?.id ?? null,
-    email: body?.email ?? '',
+    email: body?.email ?? "",
   };
 
   // copy any other top-level properties from body into the userDataObj
@@ -86,8 +91,8 @@ async function loadUserData(userId, setNotification) {
     userData.email = mapped.email;
     return userData;
   } catch (err) {
-    if (typeof setNotification === 'function') {
-      setNotification('加载失败', err?.message || '无法获取用户数据', false);
+    if (typeof setNotification === "function") {
+      setNotification("加载失败", err?.message || "无法获取用户数据", false);
     }
     throw err;
   }

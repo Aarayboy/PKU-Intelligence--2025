@@ -1,27 +1,27 @@
+import json
+import os
 import sqlite3
 import threading
 from pathlib import Path
-import json
-import os
 from typing import Optional
 
 # --- 配置 ---
 try:
     import dotenv  # type: ignore
+
     dotenv.load_dotenv()
 except Exception:
     # 未安装 python-dotenv 时忽略，直接使用系统环境变量
     pass
 
-DB_FILE = os.getenv('dbfile', './database/database.db')
-STOREBASE_DIR = os.getenv('storage_dir', './uploads/')
-
+DB_FILE = os.getenv("dbfile", "./database/database.db")
+STOREBASE_DIR = os.getenv("storage_dir", "./uploads/")
 
 
 class Database:
-    
+
     _local = threading.local()
-    
+
     def __init__(self, db_path: Optional[str] = None):
         """
         初始化数据库对象。
@@ -48,19 +48,19 @@ class Database:
         如果当前线程还没有连接，则创建一个新的并存储起来。
         """
         # 检查当前线程是否已经有连接
-        if not hasattr(self._local, 'connection'):
+        if not hasattr(self._local, "connection"):
             # 使用实例的 db_path 创建连接
             self._local.connection = sqlite3.connect(self.db_path)
             # 设置行工厂，方便通过列名访问数据
             self._local.connection.row_factory = sqlite3.Row
         return self._local.connection
-    
+
     def close_connection(self):
         """关闭当前线程的数据库连接。"""
-        if hasattr(self._local, 'connection'):
+        if hasattr(self._local, "connection"):
             self._local.connection.close()
             del self._local.connection
-        
+
     def setup_database(self):
         """
         初始化数据库，创建所有表。
@@ -68,26 +68,29 @@ class Database:
         """
         conn = self.get_db_connection()
         cursor = conn.cursor()
-    
+
         # 创建用户表
-        cursor.execute('''
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 username TEXT UNIQUE NOT NULL,
                 email TEXT UNIQUE NOT NULL,
                 password TEXT NOT NULL
             )
-        ''')
+        """
+        )
 
         # 创建课程表
-        #cursor.execute('''
-            #CREATE TABLE IF NOT EXISTS courses (
-            #    id INTEGER PRIMARY KEY AUTOINCREMENT,
-            #    title TEXT NOT NULL
+        # cursor.execute('''
+        # CREATE TABLE IF NOT EXISTS courses (
+        #    id INTEGER PRIMARY KEY AUTOINCREMENT,
+        #    title TEXT NOT NULL
         #    )
         #''')
-        
-        cursor.execute('''
+
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS courses (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 title TEXT NOT NULL,
@@ -95,20 +98,27 @@ class Database:
                 user_id INTEGER NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )
-        ''')
+        """
+        )
         # 索引
-        cursor.execute('''
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS ix_courses_title ON courses(title)
-        ''')
-        cursor.execute('''
+        """
+        )
+        cursor.execute(
+            """
             CREATE INDEX IF NOT EXISTS ix_courses_user_id ON courses(user_id)
-        ''')
-        cursor.execute('''
+        """
+        )
+        cursor.execute(
+            """
             CREATE UNIQUE INDEX IF NOT EXISTS ux_courses_user_title ON courses(user_id, title)
-        ''')
-        
+        """
+        )
+
         # 创建笔记表
-        #cursor.execute('''
+        # cursor.execute('''
         #    CREATE TABLE IF NOT EXISTS notes (
         #        id INTEGER PRIMARY KEY AUTOINCREMENT,
         #        content TEXT,
@@ -118,8 +128,9 @@ class Database:
         #        FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE SET NULL
         #    )
         #''')
-        
-        cursor.execute('''
+
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,      -- 对应 myNotes 中的 "name"
@@ -129,16 +140,16 @@ class Database:
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
                 FOREIGN KEY (course_id) REFERENCES courses (id) ON DELETE CASCADE
             )
-        ''')
-        
+        """
+        )
 
         # 初始化一个默认管理员用户（如果不存在）
-        cursor.execute("INSERT OR IGNORE INTO users (id, username, email, password) VALUES (1, 'admin', 'admin@example.com', 'adminpass')")
-    
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (id, username, email, password) VALUES (1, 'admin', 'admin@example.com', 'adminpass')"
+        )
+
         conn.commit()
         # 注意：这里不关闭连接，因为它被线程局部存储管理了
-
-
 
     def get_user(self, user_id=1):
         """
@@ -151,7 +162,7 @@ class Database:
         user = cursor.fetchone()
         return user
 
-    def add_course_to_user(self, user_id, course_title, tags = []):
+    def add_course_to_user(self, user_id, course_title, tags=[]):
         """
         为指定用户添加一门新课程。
         如果该用户已有同名课程，则复用该课程；
@@ -166,7 +177,7 @@ class Database:
                 # 1) 检查该用户是否已有同名课程
                 cursor.execute(
                     "SELECT id FROM courses WHERE user_id = ? AND title = ?",
-                    (user_id, course_title)
+                    (user_id, course_title),
                 )
                 existing = cursor.fetchone()
 
@@ -176,17 +187,18 @@ class Database:
                     # 2) 为该用户创建一条新的课程记录（允许与其他用户同名）
                     cursor.execute(
                         "INSERT INTO courses (title, tags, user_id) VALUES (?, ?, ?)",
-                        (course_title, tags, user_id)
+                        (course_title, tags, user_id),
                     )
                     course_id = cursor.lastrowid
                     # 为该课程创建存储目录
                     try:
-                        course_storage_path = Path(STOREBASE_DIR) / str(user_id)  / str(course_title)
+                        course_storage_path = (
+                            Path(STOREBASE_DIR) / str(user_id) / str(course_title)
+                        )
                         course_storage_path.mkdir(parents=True, exist_ok=True)
                     except Exception as e:
                         print(f"创建课程存储目录时出错: {e}")
-                
-            
+
                 # print(f"成功为用户 {user_id} 添加课程 '{course_title}' (课程ID: {course_id})")
                 # 查询并返回课程信息
                 cursor.execute("SELECT * FROM courses WHERE id = ?", (course_id,))
@@ -203,48 +215,50 @@ class Database:
         返回UserData数据结构。
         """
         conn = self.get_db_connection()
-        conn.row_factory = sqlite3.Row # 确保返回字典式行
+        conn.row_factory = sqlite3.Row  # 确保返回字典式行
         cursor = conn.cursor()
-    
+
         # 获取用户基本信息
         user = self.get_user(user_id)
         if not user:
             return None
 
         # 获取用户的所有课程
-        cursor.execute('''
+        cursor.execute(
+            """
             SELECT c.* FROM courses c
             WHERE c.user_id = ?
-        ''', (user_id,))
-    
+        """,
+            (user_id,),
+        )
+
         courses = cursor.fetchall()
-    
+
         # 将结果组装成类似原始JSON的结构
         user_dict = dict(user)
-        user_dict['courses'] = [dict(c) for c in courses]
+        user_dict["courses"] = [dict(c) for c in courses]
 
-        for course in user_dict['courses']:
-            course_id = course['id']
+        for course in user_dict["courses"]:
+            course_id = course["id"]
             course["tags"] = json.loads(course["tags"]) if course["tags"] else []
             # 获取该课程的所有笔记
-            cursor.execute('''
+            cursor.execute(
+                """
                 SELECT n.id, n.name, n.file FROM notes n
                 WHERE n.user_id = ? AND n.course_id = ?
-            ''', (user_id, course_id))
+            """,
+                (user_id, course_id),
+            )
             notes = cursor.fetchall()
             # 组装 myNotes 列表
-            course['myNotes'] = [dict(n) for n in notes]
+            course["myNotes"] = [dict(n) for n in notes]
             # 将 title 重命名为 name 以匹配目标JSON
-            course['name'] = course.pop('title')
+            course["name"] = course.pop("title")
             # 为myNotes添加 lessonName 字段
-            for note in course['myNotes']:
-                note['lessonName'] = course['name']
-    
+            for note in course["myNotes"]:
+                note["lessonName"] = course["name"]
+
         return user_dict
-
-
-
-
 
     def find_user_by_credentials(self, username_or_email, password):
         """
@@ -261,7 +275,7 @@ class Database:
         if user:
             # 将sqlite3.Row对象转换为字典，并移除password字段
             user_dict = dict(user)
-            user_dict.pop('password', None) # 安全地移除密码
+            user_dict.pop("password", None)  # 安全地移除密码
             return user_dict
         return None
 
@@ -286,18 +300,20 @@ class Database:
         conn = self.get_db_connection()
         cursor = conn.cursor()
         try:
-            with conn: # 自动提交或回滚
+            with conn:  # 自动提交或回滚
                 # 检查重复。数据库的UNIQUE约束是第一道防线，这里检查是为了更快返回
-                if self.find_user_by_username_or_email(username) or self.find_user_by_username_or_email(email):
+                if self.find_user_by_username_or_email(
+                    username
+                ) or self.find_user_by_username_or_email(email):
                     return None
-            
+
                 # 插入新用户。id会自动生成
                 sql = "INSERT INTO users (username, email, password) VALUES (?, ?, ?)"
                 cursor.execute(sql, (username, email, password))
-            
+
                 # 获取新创建用户的ID
                 new_user_id = cursor.lastrowid
-            
+
                 # 查询新用户信息以返回
                 cursor.execute("SELECT * FROM users WHERE id = ?", (new_user_id,))
                 new_user = cursor.fetchone()
@@ -308,12 +324,12 @@ class Database:
                     user_storage_path.mkdir(parents=True, exist_ok=True)
                 except Exception as e:
                     print(f"创建用户存储目录时出错: {e}")
-            
+
                 # 返回不含密码的副本
                 user_dict = dict(new_user)
-                user_dict.pop('password', None)
+                user_dict.pop("password", None)
                 return user_dict
-            
+
         except sqlite3.IntegrityError:
             # 如果因为UNIQUE约束失败（例如并发插入），捕获错误
             print(f"错误：用户名 '{username}' 或邮箱 '{email}' 已存在。")
@@ -321,7 +337,7 @@ class Database:
         except sqlite3.Error as e:
             print(f"数据库错误: {e}")
             return None
-    
+
     def add_note(self, title, lessonName, tags, files, user_id):
         """
         添加一条新笔记，并将其关联到指定用户和课程。
@@ -334,24 +350,33 @@ class Database:
                 # 查询课程ID
                 cursor.execute(
                     "SELECT id FROM courses WHERE user_id = ? AND title = ?",
-                    (user_id, lessonName)
+                    (user_id, lessonName),
                 )
                 course = cursor.fetchone()
                 if not course:
-                    print(f"错误：用户 {user_id} 下不存在课程 '{lessonName}'，无法添加笔记。")
+                    print(
+                        f"错误：用户 {user_id} 下不存在课程 '{lessonName}'，无法添加笔记。"
+                    )
                     return None
-                course_id = course['id'] if isinstance(course, sqlite3.Row) else course[0]
+                course_id = (
+                    course["id"] if isinstance(course, sqlite3.Row) else course[0]
+                )
                 # 插入新笔记
                 # print(f"已找到课程ID {course_id}，正在为用户 {user_id} 添加笔记 '{title}'")
                 cursor.execute(
                     "INSERT INTO notes (name, file, user_id, course_id) VALUES (?, ?, ?, ?)",
-                    (title, files[0] if files else None, user_id, course_id)
+                    (title, files[0] if files else None, user_id, course_id),
                 )
                 new_note_id = cursor.lastrowid
 
                 # 为新笔记创建存储目录（如果需要）
                 try:
-                    note_storage_path = Path(STOREBASE_DIR) / str(user_id) / str(lessonName) / str(title)
+                    note_storage_path = (
+                        Path(STOREBASE_DIR)
+                        / str(user_id)
+                        / str(lessonName)
+                        / str(title)
+                    )
                     note_storage_path.mkdir(parents=True, exist_ok=True)
                 except Exception as e:
                     print(f"创建笔记存储目录时出错: {e}")
@@ -364,4 +389,3 @@ class Database:
         except sqlite3.Error as e:
             print(f"添加笔记时发生数据库错误: {e}")
             return None
-    

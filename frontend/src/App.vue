@@ -13,14 +13,8 @@ import { useAuth } from "./composables/useAuth";
 import { useUserData } from "./composables/useUserData";
 import { useNotification } from "./composables/useNotification";
 
-const {
-  isLoggedIn,
-  currentUser,
-  showRegisterModal,
-  login,
-  register,
-  logout,
-} = useAuth();
+const { isLoggedIn, currentUser, showRegisterModal, login, register, logout } =
+  useAuth();
 const { userData, loadUserData } = useUserData();
 const { notificationData, setNotification } = useNotification();
 
@@ -30,7 +24,7 @@ const fileview = ref(false);
 const filepath = ref("");
 const showCloudModal = ref(false);
 
-provide("userData", readonly(userData));
+provide("userData", userData);
 provide("isLoggedIn", isLoggedIn);
 provide("currentUser", currentUser);
 provide("fileview", fileview);
@@ -79,14 +73,13 @@ async function handleRegister(registerData) {
       currentUser.value = null;
     }, 800);
   } catch (err) {
-    if(err?.code === 409) {
+    if (err?.code === 409) {
       setNotification("注册失败", "用户名或邮箱已被使用", false);
       return;
     }
     setNotification("注册失败", err?.message || "注册失败，请稍后重试", false);
   }
 }
-
 
 function handleLogout() {
   logout();
@@ -115,8 +108,12 @@ function CloseFileView() {
 
   <!-- 主应用内容 -->
   <div v-if="isLoggedIn">
-    <Banner :user="currentUser" @logout="handleLogout" @cloud="() => (showCloudModal = true)" />
-    
+    <Banner
+      :user="currentUser"
+      @logout="handleLogout"
+      @cloud="() => (showCloudModal = true)"
+    />
+
     <div class="flex w-full justify-center">
       <div class="w-full max-w-7xl px-4">
         <CloudShadow
@@ -125,11 +122,11 @@ function CloseFileView() {
           @close="() => (showCloudModal = false)"
           @showNotification="setNotification"
           @hasCloud="
-              () => {
-                // 同步数据后从后端重新加载用户数据以保持一致
-                loadUserData(currentUser?.id);
-              }
-            "
+            () => {
+              // 同步数据后从后端重新加载用户数据以保持一致
+              loadUserData(currentUser?.id);
+            }
+          "
         />
         <ClassShadow
           :visible="showNewCourseModal"
@@ -191,9 +188,6 @@ function CloseFileView() {
             </svg>
           </button>
         </div>
-
-
-
 
         <iframe
           :src="filepath"

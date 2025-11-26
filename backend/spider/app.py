@@ -1,42 +1,66 @@
+<<<<<<< HEAD
 from flask import Flask, jsonify, request
 import sync_schedule
 from . import spider # 导入爬虫模块
+=======
+import login
+from flask import Flask, jsonify
+
+import spider  # 导入爬虫模块
+>>>>>>> 2ae7a216e2d50b653a54d5d99148d85f564484c9
 
 app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False # 传给前端的json信息直接使用中文，不转义为 Unicode
+app.config["JSON_AS_ASCII"] = False  # 传给前端的json信息直接使用中文，不转义为 Unicode
 
-@app.route('/api/start-spider', methods=['POST']) # 定义了一个 HTTP API 接口,指定路径和只允许 POST 请求
-def handle_spider_request(): # 请求到达时调用
+# 全局复用的 session，但先不登录，等第一次请求再说
+_session = None
+
+
+def get_session():
+    """懒加载：第一次用到时才登录，后面复用同一个 session。"""
+    global _session
+    if _session is not None:
+        return _session
+
+    s = login.pku_login_and_get_session(
+        login.PKU_USERNAME, login.PKU_PASSWORD, login.COURSE_BASE_URL
+    )
+    if s is None:
+        print("登录失败")
+        return None
+
+    _session = s
+    return _session
+
+
+@app.route("/courses/current-semester", methods=["GET"])
+def current_semester_courses():
+    session = get_session()
+    courses = spider.get_current_semester_course_list(session)
+    return (
+        jsonify(
+            {
+                "success": True,
+                "message": "课程为空，准备爬取所有课程",
+                "courses": courses,
+            }
+        ),
+        200,
+    )
+
+
+@app.route("/courses/test-download", methods=["GET"])
+def test_download_handouts():
     """
-    一个API端点，用于触发爬虫
-    使用 POST 方法，因为它会执行一个动作
+    测试下载“课程讲义”接口。
+    通过查询参数 ?courseId=1 指定要下载的课程（1 是当前学期列表中的第一个）。
     """
-    print("收到爬取请求...")
-    try:
-        # 调用爬虫的主函数
-        downloaded_files = spider.start_spidering()
-        
-        if not downloaded_files:
-            return jsonify({
-                "status": "warning",
-                "message": "爬虫已运行，但没有下载到任何文件。"
-            }), 200
 
-        return jsonify({
-            "status": "success",
-            "message": f"成功下载 {len(downloaded_files)} 个文件。",
-            "files": downloaded_files
-        }), 200
+    course_id = 9
 
-    except Exception as e:
-        # 捕获爬虫过程中可能出现的任何错误
-        print(f"爬虫执行出错: {e}")
-        return jsonify({
-            "status": "error",
-            "message": "爬虫执行过程中发生内部错误。",
-            "error": str(e)
-        }), 500
+    print(f"当前session为:{ _session}")
 
+<<<<<<< HEAD
 @app.route("/sync", methods=["POST"])
 def sync_route():
     payload = request.get_json()
@@ -51,6 +75,25 @@ def sync_route():
     return jsonify(success=True, schedule=data["grid"], course_list=data["course_list"])
 
 if __name__ == '__main__':
+=======
+    files = spider.download_handouts_for_course(
+        _session, course_id, section_names=None, max_files=4, download_root="download"
+    )
+
+    return (
+        jsonify(
+            {
+                "success": True,
+                "message": f"为课程 {course_id} 下载完成",
+                "files": files,
+            }
+        ),
+        200,
+    )
+
+
+if __name__ == "__main__":
+>>>>>>> 2ae7a216e2d50b653a54d5d99148d85f564484c9
     # 运行 Flask app
     # debug=True 模式会在修改代码后自动重启服务器
-    app.run(host='0.0.0.0', port=5001, debug=True)
+    app.run(host="0.0.0.0", port=5001, debug=True)

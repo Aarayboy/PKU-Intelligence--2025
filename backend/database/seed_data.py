@@ -13,27 +13,34 @@ It will create:
 
 Database location is determined by Database() (env var 'dbfile' or default ./database/database.db).
 """
+
 from __future__ import annotations
 
 import json
-from typing import Optional
-from .database import Database
 import sqlite3
+from typing import Optional
+
+from .database import Database
 
 
-def ensure_user(db: Database, username: str, email: str, password: str) -> Optional[int]:
+def ensure_user(
+    db: Database, username: str, email: str, password: str
+) -> Optional[int]:
     """Create user if not exists, return user id."""
     user = db.add_user(username, email, password)
     if not user:
         # already exists -> fetch
-        user = db.find_user_by_username_or_email(username) or db.find_user_by_username_or_email(email)
+        user = db.find_user_by_username_or_email(
+            username
+        ) or db.find_user_by_username_or_email(email)
     return user.get("id") if user else None
 
 
-def add_note(db: Database, user_id: int, course_id: int, name: str, file: Optional[str] = None) -> int:
+def add_note(
+    db: Database, user_id: int, course_id: int, name: str, file: Optional[str] = None
+) -> int:
     """Insert a note row. Returns new note id."""
     db.add_note(name, course_id, [], [file] if file else [], user_id)
-
 
 
 def seed():
@@ -50,13 +57,12 @@ def seed():
         raise RuntimeError("Failed to ensure seed users")
 
     # Courses for Alice
-    math_alice = db.add_course_to_user(alice_id , "高等数学", ["基础", "必修"])
+    math_alice = db.add_course_to_user(alice_id, "高等数学", ["基础", "必修"])
     ds_alice = db.add_course_to_user(alice_id, "数据结构", ["编程", "必修"])
 
     # Courses for Bob (same titles allowed, separate rows per user)
     math_bob = db.add_course_to_user(bob_id, "高等数学", ["基础"])
     os_bob = db.add_course_to_user(bob_id, "操作系统", ["系统"])
-
 
     print(math_alice, ds_alice, math_bob, os_bob)
     # Notes for Alice
