@@ -33,7 +33,7 @@ const DEFAULT_LEARNING_LINKS = [
       },
       {
         // 即使是超长的名称，在 UI 中也会被省略号截断，但悬浮时会显示全部
-        name: "这是一个超长的链接名称测试截断效果", 
+        name: "这是一个超长的链接名称测试截断效果，看看在界面上会如何显示", 
         url: "http://long-name-test.com/",
         desc: "测试链接名称超出限制时的显示效果",
         isTrusted: false, 
@@ -403,18 +403,32 @@ const removeCategory = (categoryName) => {
             <div
               class="relative flex items-center p-4 bg-gray-50 border border-gray-200 rounded-xl transition duration-200 hover:shadow-md hover:border-indigo-400 group/link"
             >
+              <span 
+                :class="[
+                    'absolute top-2 right-2 text-xs font-normal px-2 py-0.5 rounded-full z-10 transition-opacity',
+                    link.isTrusted 
+                        ? 'text-green-500 bg-green-100' 
+                        : 'text-amber-500 bg-amber-100'
+                ]"
+              >
+                  {{ link.isTrusted ? '信任' : '外部' }}
+              </span>
               <a
                 @click.prevent="confirmLinkNavigation(link)" 
                 href="#"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="flex-grow pr-10 cursor-pointer"
+                class="flex-grow pr-10 cursor-pointer min-w-0"
               >
-                <div class="font-semibold text-gray-800 group-hover/link:text-indigo-700 transition flex items-center min-w-0">
-                  <span :title="link.name" class="truncate pr-2 min-w-0">{{ link.name }}</span>
-                  <span v-if="link.isTrusted" class="flex-shrink-0 text-xs font-normal text-green-500 bg-green-100 px-2 py-0.5 rounded-full">信任</span>
-                  <span v-else class="flex-shrink-0 text-xs font-normal text-amber-500 bg-amber-100 px-2 py-0.5 rounded-full">外部</span>
+                <div class="font-semibold text-gray-800 group-hover/link:text-indigo-700 transition overflow-hidden">
+                    <span 
+                        :title="link.name" 
+                        class="truncate block min-w-0" 
+                    >
+                        {{ link.name }}
+                    </span>
                 </div>
+                
                 <p class="text-sm text-gray-500 mt-1 line-clamp-1">
                     {{ link.desc }}
                 </p>
