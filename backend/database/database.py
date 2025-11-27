@@ -143,6 +143,82 @@ class Database:
         """
         )
 
+        # 创建链接分类表
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS link_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_link_categories_user_id ON link_categories(user_id)
+        """
+        )
+
+        # 创建链接表
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS useful_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                description TEXT,
+                is_trusted BOOLEAN DEFAULT FALSE,
+                category_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES link_categories (id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_useful_links_user_id ON useful_links(user_id)
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_useful_links_category_id ON useful_links(category_id)
+        """
+        )
+
+        # 创建任务管理表
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT,
+                deadline TEXT, -- 存储日期时间字符串
+                priority INTEGER DEFAULT 1, -- 优先级：1-低，2-中，3-高
+                completed BOOLEAN DEFAULT FALSE,
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_tasks_user_id ON tasks(user_id)
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_tasks_deadline ON tasks(deadline)
+        """
+        )
+
         # 初始化一个默认管理员用户（如果不存在）
         cursor.execute(
             "INSERT OR IGNORE INTO users (id, username, email, password) VALUES (1, 'admin', 'admin@example.com', 'adminpass')"
@@ -389,3 +465,319 @@ class Database:
         except sqlite3.Error as e:
             print(f"添加笔记时发生数据库错误: {e}")
             return None
+        
+    def edit_course(self, user_id, old_title, new_title):
+        """
+        修改课程名称
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 检查新名称是否已存在
+                cursor.execute(
+                    "SELECT id FROM courses WHERE user_id = ? AND title = ?",
+                    (user_id, new_title)
+                )
+                existing = cursor.fetchone()
+                if existing:
+                    return {"error": "课程名称已存在"}
+                
+                # 更新课程名称
+                cursor.execute(
+                    "UPDATE courses SET title = ? WHERE user_id = ? AND title = ?",
+                    (new_title, user_id, old_title)
+                )
+                
+                if cursor.rowcount == 0:
+                    return {"error": "课程不存在或无权修改"}
+                
+                return {"success": True, "message": "课程名称修改成功"}
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return {"error": f"数据库错误: {e}"}
+
+    def edit_note(self, user_id, course_name, old_note_name, new_note_name):
+        """
+        修改笔记名称
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 获取课程ID
+                cursor.execute(
+                    "SELECT id FROM courses WHERE user_id = ? AND title = ?",
+                    (user_id, course_name)
+                )
+                course = cursor.fetchone()
+                if not course:
+                    return {"error": "课程不存在"}
+                
+                course_id = course["id"] if isinstance(course, sqlite3.Row) else course[0]
+                
+                # 检查新名称是否已存在
+                cursor.execute(
+                    "SELECT id FROM notes WHERE user_id = ? AND course_id = ? AND name = ?",
+                    (user_id, course_id, new_note_name)
+                )
+                existing = cursor.fetchone()
+                if existing:
+                    return {"error": "笔记名称已存在"}
+                
+                # 更新笔记名称
+                cursor.execute(
+                    "UPDATE notes SET name = ? WHERE user_id = ? AND course_id = ? AND name = ?",
+                    (new_note_name, user_id, course_id, old_note_name)
+                )
+                
+                if cursor.rowcount == 0:
+                    return {"error": "笔记不存在或无权修改"}
+                
+                return {"success": True, "message": "笔记名称修改成功"}
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return {"error": f"数据库错误: {e}"}
+
+    # 常用链接相关方法
+    def add_link_category(self, user_id, category, icon, sort_order=0):
+        """
+        添加链接分类
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "INSERT INTO link_categories (category, icon, user_id, sort_order) VALUES (?, ?, ?, ?)",
+                    (category, icon, user_id, sort_order)
+                )
+                category_id = cursor.lastrowid
+                
+                cursor.execute("SELECT * FROM link_categories WHERE id = ?", (category_id,))
+                new_category = cursor.fetchone()
+                return dict(new_category) if new_category else None
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return None
+
+    def get_link_categories(self, user_id):
+        """
+        获取用户的所有链接分类
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT * FROM link_categories WHERE user_id = ? ORDER BY sort_order, created_at",
+                (user_id,)
+            )
+            categories = cursor.fetchall()
+            return [dict(cat) for cat in categories]
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return []
+
+    def add_useful_link(self, user_id, category_id, name, url, description="", is_trusted=False, sort_order=0):
+        """
+        添加常用链接
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "INSERT INTO useful_links (name, url, description, is_trusted, category_id, user_id, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (name, url, description, is_trusted, category_id, user_id, sort_order)
+                )
+                link_id = cursor.lastrowid
+                
+                cursor.execute("SELECT * FROM useful_links WHERE id = ?", (link_id,))
+                new_link = cursor.fetchone()
+                return dict(new_link) if new_link else None
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return None
+
+    def get_useful_links_by_category(self, user_id):
+        """
+        获取用户的所有链接，按分类组织
+        返回格式符合 LinkCategory 结构
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # 获取所有分类
+            categories = self.get_link_categories(user_id)
+            
+            result = []
+            for category in categories:
+                cursor.execute(
+                    "SELECT * FROM useful_links WHERE user_id = ? AND category_id = ? ORDER BY sort_order, created_at",
+                    (user_id, category['id'])
+                )
+                links = cursor.fetchall()
+                
+                link_list = []
+                for link in links:
+                    link_dict = dict(link)
+                    link_list.append({
+                        "name": link_dict['name'],
+                        "url": link_dict['url'],
+                        "desc": link_dict['description'] or "",
+                        "isTrusted": bool(link_dict['is_trusted'])
+                    })
+                
+                result.append({
+                    "category": category['category'],
+                    "icon": category['icon'],
+                    "links": link_list
+                })
+            
+            return result
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return []
+
+    def delete_link_category(self, user_id, category_id):
+        """
+        删除链接分类（会级联删除该分类下的所有链接）
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "DELETE FROM link_categories WHERE id = ? AND user_id = ?",
+                    (category_id, user_id)
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    def delete_useful_link(self, user_id, link_id):
+        """
+        删除常用链接
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "DELETE FROM useful_links WHERE id = ? AND user_id = ?",
+                    (link_id, user_id)
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    # 任务管理相关方法
+    def add_task(self, user_id, title, description, deadline, priority=1):
+        """
+        添加任务
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "INSERT INTO tasks (title, description, deadline, priority, user_id) VALUES (?, ?, ?, ?, ?)",
+                    (title, description, deadline, priority, user_id)
+                )
+                task_id = cursor.lastrowid
+                
+                cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+                new_task = cursor.fetchone()
+                return dict(new_task) if new_task else None
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return None
+
+    def get_tasks(self, user_id):
+        """
+        获取用户的任务列表
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT * FROM tasks WHERE user_id = ? ORDER BY deadline ASC, priority DESC",
+                (user_id,)
+            )
+            tasks = cursor.fetchall()
+            return [dict(task) for task in tasks]
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return []
+
+    def update_task(self, user_id, task_id, **updates):
+        """
+        更新任务信息
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 构建动态更新语句
+                set_clause = ", ".join([f"{key} = ?" for key in updates.keys()])
+                values = list(updates.values())
+                values.extend([task_id, user_id])
+                
+                cursor.execute(
+                    f"UPDATE tasks SET {set_clause} WHERE id = ? AND user_id = ?",
+                    values
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    def delete_task(self, user_id, task_id):
+        """
+        删除任务
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "DELETE FROM tasks WHERE id = ? AND user_id = ?",
+                    (task_id, user_id)
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    def update_deadlines(self, user_id, deadlines):
+        """
+        批量更新用户的DDL列表
+        deadlines: 任务对象列表
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 先删除用户的所有现有任务
+                cursor.execute("DELETE FROM tasks WHERE user_id = ?", (user_id,))
+                
+                # 批量插入新任务
+                for task in deadlines:
+                    cursor.execute(
+                        "INSERT INTO tasks (title, description, deadline, priority, completed, user_id) VALUES (?, ?, ?, ?, ?, ?)",
+                        (
+                            task.get('title', ''),
+                            task.get('description', ''),
+                            task.get('deadline', ''),
+                            task.get('priority', 1),
+                            task.get('completed', False),
+                            user_id
+                        )
+                    )
+                
+                return True
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False

@@ -438,8 +438,15 @@ def editCourse():
     oldname = data.get("oldname")
     newname = data.get("newname")
 
-    # 如果成功更新，示例返回 
-    return jsonify({"success": True, "message": "Course renamed"}), 200
+    if not userId or not oldname or not newname:
+        return jsonify({"success": False, "error": "userId, oldname, newname 均为必填"}), 400
+
+    result = storage.edit_course(userId, oldname, newname)
+    
+    if "error" in result:
+        return jsonify({"success": False, "error": result["error"]}), 400
+    
+    return jsonify({"success": True, "message": "课程名称修改成功"}), 200
 
 
 @app.route("/edit/note", methods=["POST"])
@@ -448,7 +455,6 @@ def editNote():
     修改笔记名称
     需要参数：userId, courseName, oldname, newname
     """
-    
     data = None
     if request.is_json:
         data = request.get_json()
@@ -460,14 +466,233 @@ def editNote():
     oldname = data.get("oldname")
     newname = data.get("newname")
 
-    # 如果成功更新，示例返回 
-    return jsonify({"success": True, "message": "Note renamed"}), 200
+    if not userId or not courseName or not oldname or not newname:
+        return jsonify({"success": False, "error": "userId, courseName, oldname, newname 均为必填"}), 400
+
+    result = storage.edit_note(userId, courseName, oldname, newname)
+    
+    if "error" in result:
+        return jsonify({"success": False, "error": result["error"]}), 400
+    
+    return jsonify({"success": True, "message": "笔记名称修改成功"}), 200
+
+# 常用链接相关接口
+@app.route("/links/categories", methods=["POST"])
+def create_link_category():
+    """
+    创建链接分类
+    需要参数：userId, category, icon, sortOrder(可选)
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    category = data.get("category")
+    icon = data.get("icon")
+    sort_order = data.get("sortOrder", 0)
+
+    if not userId or not category or not icon:
+        return jsonify({"success": False, "error": "userId, category, icon 均为必填"}), 400
+
+    new_category = storage.add_link_category(userId, category, icon, sort_order)
+    
+    if not new_category:
+        return jsonify({"success": False, "error": "创建分类失败"}), 500
+    
+    return jsonify({"success": True, "category": new_category}), 201
+
+
+@app.route("/links", methods=["POST"])
+def create_link():
+    """
+    创建常用链接
+    需要参数：userId, categoryId, name, url, description(可选), isTrusted(可选), sortOrder(可选)
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    category_id = data.get("categoryId")
+    name = data.get("name")
+    url = data.get("url")
+    description = data.get("description", "")
+    is_trusted = data.get("isTrusted", False)
+    sort_order = data.get("sortOrder", 0)
+
+    if not userId or not category_id or not name or not url:
+        return jsonify({"success": False, "error": "userId, categoryId, name, url 均为必填"}), 400
+
+    new_link = storage.add_useful_link(userId, category_id, name, url, description, is_trusted, sort_order)
+    
+    if not new_link:
+        return jsonify({"success": False, "error": "创建链接失败"}), 500
+    
+    return jsonify({"success": True, "link": new_link}), 201
+
+
+@app.route("/links", methods=["GET"])
+def get_links():
+    """
+    获取用户的所有链接（按分类组织）
+    需要参数：userId
+    """
+    userId = request.args.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+
+    links_by_category = storage.get_useful_links_by_category(userId)
+    
+    return jsonify({"success": True, "categories": links_by_category}), 200
+
+
+@app.route("/links/categories/<int:category_id>", methods=["DELETE"])
+def delete_link_category(category_id):
+    """
+    删除链接分类
+    需要参数：userId
+    """
+    userId = request.args.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+
+    success = storage.delete_link_category(userId, category_id)
+    
+    if not success:
+        return jsonify({"success": False, "error": "删除分类失败"}), 400
+    
+    return jsonify({"success": True, "message": "分类删除成功"}), 200
+
+
+@app.route("/links/<int:link_id>", methods=["DELETE"])
+def delete_link(link_id):
+    """
+    删除常用链接
+    需要参数：userId
+    """
+    userId = request.args.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+
+    success = storage.delete_useful_link(userId, link_id)
+    
+    if not success:
+        return jsonify({"success": False, "error": "删除链接失败"}), 400
+    
+    return jsonify({"success": True, "message": "链接删除成功"}), 200
+
+
+# 任务管理相关接口
+@app.route("/tasks", methods=["POST"])
+def create_task():
+    """
+    创建任务
+    需要参数：userId, title, description(可选), deadline, priority(可选)
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    title = data.get("title")
+    description = data.get("description", "")
+    deadline = data.get("deadline")
+    priority = data.get("priority", 1)
+
+    if not userId or not title or not deadline:
+        return jsonify({"success": False, "error": "userId, title, deadline 均为必填"}), 400
+
+    new_task = storage.add_task(userId, title, description, deadline, priority)
+    
+    if not new_task:
+        return jsonify({"success": False, "error": "创建任务失败"}), 500
+    
+    return jsonify({"success": True, "task": new_task}), 201
+
+
+@app.route("/tasks", methods=["GET"])
+def get_tasks():
+    """
+    获取用户的任务列表
+    需要参数：userId
+    """
+    userId = request.args.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+
+    tasks = storage.get_tasks(userId)
+    
+    return jsonify({"success": True, "tasks": tasks}), 200
+
+
+@app.route("/tasks/<int:task_id>", methods=["PUT"])
+def update_task(task_id):
+    """
+    更新任务信息
+    需要参数：userId, 以及要更新的字段（title, description, deadline, priority, completed）
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+
+    # 提取可更新的字段
+    updates = {}
+    for field in ['title', 'description', 'deadline', 'priority', 'completed']:
+        if field in data:
+            updates[field] = data[field]
+
+    if not updates:
+        return jsonify({"success": False, "error": "没有提供要更新的字段"}), 400
+
+    success = storage.update_task(userId, task_id, **updates)
+    
+    if not success:
+        return jsonify({"success": False, "error": "更新任务失败"}), 400
+    
+    return jsonify({"success": True, "message": "任务更新成功"}), 200
+
+
+@app.route("/tasks/<int:task_id>", methods=["DELETE"])
+def delete_task(task_id):
+    """
+    删除任务
+    需要参数：userId
+    """
+    userId = request.args.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+
+    success = storage.delete_task(userId, task_id)
+    
+    if not success:
+        return jsonify({"success": False, "error": "删除任务失败"}), 400
+    
+    return jsonify({"success": True, "message": "任务删除成功"}), 200
 
 @app.route("/edit/deadline", methods=["POST"])
 def updateDeadline():
     """
     更新用户的DDL列表
-    需要参数：userId, deadlines（列表）
+    需要参数：userId, deadlines（任务对象列表）
     """
     data = None
     if request.is_json:
@@ -478,9 +703,15 @@ def updateDeadline():
     userId = data.get("userId")
     deadlines = data.get("deadlines")
 
-    # 如果成功更新，示例返回 
-    return jsonify({"success": True, "message": "Deadlines updated"}), 200
+    if not userId or not deadlines:
+        return jsonify({"success": False, "error": "userId 和 deadlines 均为必填"}), 400
 
+    success = storage.update_deadlines(userId, deadlines)
+    
+    if not success:
+        return jsonify({"success": False, "error": "更新DDL列表失败"}), 500
+    
+    return jsonify({"success": True, "message": "DDL列表更新成功"}), 200
 
 if __name__ == "__main__":
     # Run on port 4000
