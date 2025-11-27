@@ -49,8 +49,6 @@ class UserData {
         ),
       ),
     );
-    
-
   }
 }
 
