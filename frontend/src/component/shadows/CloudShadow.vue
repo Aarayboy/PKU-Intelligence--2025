@@ -2,7 +2,7 @@
 import { ref, reactive } from "vue";
 import api from "@/api";
 const props = defineProps(["visible", "userId"]);
-const emit = defineEmits(["close", "showNotification", "hasCloud"]);
+const emit = defineEmits(["close", "showNotification", "done"]);
 const choseCourse = ref(false);
 const cloudCourses = ref([]);
 
@@ -62,7 +62,7 @@ const handleSubmit = async () => {
       }
     } else {
       choseCourse.value = false;
-      emit("hasCloud");
+      emit("done");
       emit("showNotification", "成功", Isok, true);
       closeWindow();
     }

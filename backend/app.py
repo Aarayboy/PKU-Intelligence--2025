@@ -422,6 +422,66 @@ def cloud_status():
         )
 
 
+@app.route("/edit/course", methods=["POST"])
+def editCourse():
+    """
+    修改课程名称
+    需要参数：userId, oldname, newname
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    oldname = data.get("oldname")
+    newname = data.get("newname")
+
+    # 如果成功更新，示例返回 
+    return jsonify({"success": True, "message": "Course renamed"}), 200
+
+
+@app.route("/edit/note", methods=["POST"])
+def editNote():
+    """
+    修改笔记名称
+    需要参数：userId, courseName, oldname, newname
+    """
+    
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    courseName = data.get("courseName")
+    oldname = data.get("oldname")
+    newname = data.get("newname")
+
+    # 如果成功更新，示例返回 
+    return jsonify({"success": True, "message": "Note renamed"}), 200
+
+@app.route("/edit/deadline", methods=["POST"])
+def updateDeadline():
+    """
+    更新用户的DDL列表
+    需要参数：userId, deadlines（列表）
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+
+    userId = data.get("userId")
+    deadlines = data.get("deadlines")
+
+    # 如果成功更新，示例返回 
+    return jsonify({"success": True, "message": "Deadlines updated"}), 200
+
+
 if __name__ == "__main__":
     # Run on port 4000
     app.run(host="0.0.0.0", port=4000, debug=True)

@@ -25,3 +25,11 @@
 .inactive {
   @apply bg-white/80 text-gray-600 hover:bg-white hover:text-pkured hover:shadow-md;
 }
+
+.urgent{
+ @apply bg-red-400 hover:bg-red-600 ring-red-200
+}
+
+.no-urgent{
+  @apply bg-green-400 hover:bg-green-600 ring-green-200
+}

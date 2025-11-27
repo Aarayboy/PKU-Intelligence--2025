@@ -1,8 +1,8 @@
 <script setup>
+// 定义链接数据，方便在模板中循环渲染
+const emit = defineEmits(["DdlDetail"]); // 这行不要管他，我为了消除警告加的
 import { ref, computed, watch } from 'vue';
-
-// 使用 ref 包装数据，使其成为响应式状态
-const learningLinks = ref([
+const learningLinks = [
   {
     category: "学术研究与资料库",
     icon: "📚",
