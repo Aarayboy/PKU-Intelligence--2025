@@ -1,3 +1,7 @@
+# 接口文档
+
+## 数据结构定义
+
 ```js
 // For LinksPage
 class LinkCategory{
@@ -48,22 +52,20 @@ class Link{
       },
     ],
 }
-```
+课程和笔记编辑接口
+修改课程名称
+URL: /edit/course
 
-# 新增接口文档
+方法: POST
 
-## 课程和笔记编辑接口
+参数:
 
-### 修改课程名称
-- **URL**: `/edit/course`
-- **方法**: `POST`
-- **参数**:
-  ```json
-  {
-    "userId": 1,
-    "oldname": "原课程名",
-    "newname": "新课程名"
-  }
+json
+{
+  "userId": 1,
+  "oldname": "原课程名",
+  "newname": "新课程名"
+}
 响应:
 
 json
