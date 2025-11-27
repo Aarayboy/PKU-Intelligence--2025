@@ -67,7 +67,7 @@ PKU-Intelligence--2025/
    ```bash
    npm run dev
    ```
-   访问 `http://localhost:5173`
+   访问 `http://localhost:8081`
 
 ## 代码规范
 
