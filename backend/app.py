@@ -47,7 +47,20 @@ def userdata():
     user = storage.get_user(user_id)
     if not user:
         return jsonify({"error": "user not found"}), 404
+    
     # Return user data with courses
+
+    """ 这里添加了示例的 ddl 列表，实际应用中应从数据库获取并返回
+    YOU CODE HERE
+    """
+    
+    # 添加上实例 ddl 列表
+    deadlines = [{"name": "提交作业1", "deadline": "2024-10-01 23:59", "message": "balabala", "status": 0},
+                 {"name": "项目报告", "deadline": "2024-10-15 17:00", "message": "balabala", "status": 1}]
+
+    """ 还要添加 linkCategories 字段，这里没有实例数据，实际应用中应从数据库获取并返回
+    """
+    user["deadlines"] = deadlines
     return jsonify({"data": user})
 
 
@@ -438,6 +451,11 @@ def editCourse():
     oldname = data.get("oldname")
     newname = data.get("newname")
 
+    """ TODO:
+    更改课程名称 
+    YOU CODE HERE
+    """
+
     # 如果成功更新，示例返回 
     return jsonify({"success": True, "message": "Course renamed"}), 200
 
@@ -460,6 +478,11 @@ def editNote():
     oldname = data.get("oldname")
     newname = data.get("newname")
 
+    """ TODO:
+    更改笔记名称
+    YOU CODE HERE
+    """
+
     # 如果成功更新，示例返回 
     return jsonify({"success": True, "message": "Note renamed"}), 200
 
@@ -478,9 +501,37 @@ def updateDeadline():
     userId = data.get("userId")
     deadlines = data.get("deadlines")
 
+    """ TODO:
+    更改用户的DDL列表
+    YOU CODE HERE
+    """
+
     # 如果成功更新，示例返回 
     return jsonify({"success": True, "message": "Deadlines updated"}), 200
 
+
+@app.route("/edit/linkcategory", methods=["POST"])
+def updateLinkCategory():
+    """
+    更新用户的链接分类列表
+    需要参数：userId, linkCategories（列表）
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+
+    userId = data.get("userId")
+    linkCategories = data.get("linkCategories")
+
+    """ TODO:
+    更改用户的链接分类
+    YOU CODE HERE
+    """
+    
+    # 如果成功更新，示例返回 
+    return jsonify({"success": True, "message": "Link categories updated"}), 200
 
 if __name__ == "__main__":
     # Run on port 4000

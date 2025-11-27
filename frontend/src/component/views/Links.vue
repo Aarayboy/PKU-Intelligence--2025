@@ -1,4 +1,5 @@
 <script setup>
+import { UpdateLinkCategory } from '@/api';
 import { ref, computed, watch, inject } from 'vue';
 
 const emit = defineEmits(["DdlDetail"]); // 这行不要管他，我为了消除警告加的
@@ -90,6 +91,7 @@ const learningLinks = computed({
     // 优先尝试修改 userData 中的数据
     if (userData.value?.linkCategories) {
       userData.value.linkCategories = newValue;
+      UpdateLinkCategory({ userId: userData.value.id, linkCategories: newValue })
     } else {
       // 如果 userData 中没有，则修改本地 ref
       localLearningLinks.value = newValue;

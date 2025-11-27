@@ -161,6 +161,7 @@ function CloseFileView() {
           @done="
             () => {
               // 同步数据后从后端重新加载用户数据以保持一致
+
               loadUserData(currentUser?.id);
             }
           "
