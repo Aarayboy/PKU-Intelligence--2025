@@ -20,7 +20,7 @@ class MyCourse {
 class UserData {
   // accept an options object so we can keep backward compatibility and also
   // assign any extra properties that backend may return (e.g. avatar, bio, role)
-  constructor({ courses = [], username = "", userId = null, email = "", deadlines = [] } = {}) {
+  constructor({ courses = [], username = "", userId = null, email = "", deadlines = [], LinkCategorys = []} = {}) {
     this.username = username;
     this.userId = userId;
     this.email = email;
@@ -33,8 +33,46 @@ class UserData {
         d?.status ?? "",
       ),
     );
+
+    this.LinkCategorys = LinkCategorys.map((lc) =>
+      new LinkCategory(
+        lc?.category ?? "",
+        lc?.icon ?? "",
+        (lc?.links ?? []).map(
+          (l) =>
+            new Links(
+              l?.name ?? "",
+              l?.url ?? "",
+              l?.desc ?? "",
+              l?.isTrusted ?? false,
+            ),
+        ),
+      ),
+    );
+    
+
   }
 }
+
+// For LinksPage
+class LinkCategory{
+  // category, icon, array of links
+  constructor(category="", icon="", links=[]){
+    this.category=category;
+    this.icon=icon;
+    this.links=links;
+  }
+}
+class Link{
+  constructor(name="",url="", desc="", isTrusted=false){
+    this.name=name;
+    this.url=url;
+    this.desc=desc;
+    this.isTrusted=isTrusted;
+  }
+}
+
+
 
 class DDL{
   constructor(name="",deadline="",message="", status=""){
