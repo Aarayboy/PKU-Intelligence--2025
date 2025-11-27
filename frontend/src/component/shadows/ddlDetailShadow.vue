@@ -49,7 +49,7 @@ const getTask = computed(() => {
   }
 });
 
-const finishWork = async (idx) => {
+const finishWork = (idx) => {
   console.log("finishWork called with idx:", idx);
   if (idx >= 0 && idx < deadlines.value.length) {
     console.log("edit existing task");

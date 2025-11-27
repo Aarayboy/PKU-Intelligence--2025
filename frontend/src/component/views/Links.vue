@@ -1,69 +1,101 @@
 <script setup>
-// 定义链接数据，方便在模板中循环渲染
+import { ref, computed, watch, inject } from 'vue';
+
 const emit = defineEmits(["DdlDetail"]); // 这行不要管他，我为了消除警告加的
 const userData = inject("userData");
-import { ref, computed, watch } from 'vue';
-const learningLinks = userData.LinkCategories;
-
-// const learningLinks = [
-//   {
-//     category: "学术研究与资料库",
-//     icon: "📚",
-//     links: [
-//       {
-//         name: "Google Scholar",
-//         url: "https://scholar.google.com/",
-//         desc: "全球论文搜索，查找引文",
-//         isTrusted: true, 
-//       },
-//       {
-//         name: "CNKI (中国知网)",
-//         url: "https://www.cnki.net/",
-//         desc: "中文学术期刊、学位论文",
-//         isTrusted: true, 
-//       },
-//       {
-//         name: "一个不信任的网站",
-//         url: "http://untrusted-example.com/",
-//         desc: "一个会弹出警告的链接",
-//         isTrusted: false, 
-//       },
-//       {
-//         // 即使是超长的名称，在 UI 中也会被省略号截断，但悬浮时会显示全部
-//         name: "这是一个超长的链接名称测试截断", 
-//         url: "http://long-name-test.com/",
-//         desc: "测试链接名称超出限制时的显示效果",
-//         isTrusted: false, 
-//       },
-//     ],
-//   },
-//   {
-//     category: "在线课程与终身学习",
-//     icon: "💻",
-//     links: [
-//       {
-//         name: "Coursera",
-//         url: "https://www.coursera.org/",
-//         desc: "全球顶级大学专业课程",
-//         isTrusted: true, 
-//       },
-//     ],
-//   },
-//   {
-//     category: "实用工具与作业网站",
-//     icon: "🛠️",
-//     links: [
-//       {
-//         name: "GitHub",
-//         url: "https://github.com/",
-//         desc: "代码托管与开源协作平台",
-//         isTrusted: true, 
-//       },
-//     ],
-//   },
-// ];
 
 
+// ------------------------------------------------------------------
+// 【修改点 1 & 2】：定义默认数据（作为回退）
+// ------------------------------------------------------------------
+const DEFAULT_LEARNING_LINKS = [
+  {
+    category: "学术研究与资料库",
+    icon: "📚",
+    links: [
+      {
+        name: "Google Scholar",
+        url: "https://scholar.google.com/",
+        desc: "全球论文搜索，查找引文",
+        isTrusted: true, 
+      },
+      {
+        name: "CNKI (中国知网)",
+        url: "https://www.cnki.net/",
+        desc: "中文学术期刊、学位论文",
+        isTrusted: true, 
+      },
+      {
+        name: "一个不信任的网站",
+        url: "http://untrusted-example.com/",
+        desc: "一个会弹出警告的链接",
+        isTrusted: false, 
+      },
+      {
+        // 即使是超长的名称，在 UI 中也会被省略号截断，但悬浮时会显示全部
+        name: "这是一个超长的链接名称测试截断效果", 
+        url: "http://long-name-test.com/",
+        desc: "测试链接名称超出限制时的显示效果",
+        isTrusted: false, 
+      },
+    ],
+  },
+  {
+    category: "在线课程与终身学习",
+    icon: "💻",
+    links: [
+      {
+        name: "Coursera",
+        url: "https://www.coursera.org/",
+        desc: "全球顶级大学专业课程",
+        isTrusted: true, 
+      },
+    ],
+  },
+  {
+    category: "实用工具与作业网站",
+    icon: "🛠️",
+    links: [
+      {
+        name: "GitHub",
+        url: "https://github.com/",
+        desc: "代码托管与开源协作平台",
+        isTrusted: true, 
+      },
+    ],
+  },
+];
+
+// 【新增】一个内部 ref 来存储用户对默认数据的修改 (仅在未连接到 userData 时使用)
+const localLearningLinks = ref(DEFAULT_LEARNING_LINKS); 
+
+
+// ------------------------------------------------------------------
+// 【修改点 3】：使用 computed 属性实现数据源切换
+// ------------------------------------------------------------------
+const learningLinks = computed({
+  get() {
+    // 检查 userData 是否存在 LinkCategorys 且 LinkCategorys 数组长度大于 0
+    const userLinks = userData.value?.linkCategories;
+
+    if (userLinks && userLinks.length > 0) {
+      // 优先使用 userData 中的数据
+      return userLinks;
+    } else {
+      // 回退到本地存储的默认数据（如果用户在离线状态下修改过默认数据，可以保留）
+      return localLearningLinks.value;
+    }
+  },
+  set(newValue) {
+    // 优先尝试修改 userData 中的数据
+    if (userData.value?.linkCategories) {
+      userData.value.linkCategories = newValue;
+    } else {
+      // 如果 userData 中没有，则修改本地 ref
+      localLearningLinks.value = newValue;
+    }
+  }
+});
 
 
 // --- 状态管理 ---
@@ -79,13 +111,15 @@ const linkToOpen = ref(null);
 const shouldTrustInModal = ref(false); 
 
 // 计算初始分类名，作为 newLink.category 的默认值
-const initialCategory = learningLinks.value.length > 0 ? learningLinks.value[0].category : '';
+// ⚠️ 注意：这里必须使用 computed 属性 learningLinks
+const initialCategory = computed(() => learningLinks.value.length > 0 ? learningLinks.value[0].category : '');
 
 const newLink = ref({
   name: '',
   url: '',
   desc: '',
-  category: initialCategory,
+  // 使用计算属性的 value 作为默认值
+  category: initialCategory.value,
   isTrusted: true, // 添加链接时默认信任
 });
 
@@ -102,6 +136,15 @@ const linksToManage = computed(() => {
   const category = learningLinks.value.find(g => g.category === currentCategoryToManage.value);
   return category ? category.links : [];
 });
+
+// 监听分类列表变化，更新 newLink 的默认分类
+watch(categories, (newCategories) => {
+  // 如果当前选中的分类被删除，或没有选中，且有新的分类，则更新默认值
+  if (!newCategories.includes(newLink.value.category) && newCategories.length > 0) {
+    newLink.value.category = newCategories[0];
+  }
+}, { immediate: true });
+
 
 // --- 互斥逻辑 (更新以包含新的侧边栏) ---
 watch(isLinkPanelOpen, (newVal) => {
@@ -133,7 +176,7 @@ const toggleCategoryPanel = () => {
     isCategoryPanelOpen.value = !isCategoryPanelOpen.value;
 }
 
-// 【已修改】：链接管理侧边栏的开关逻辑
+// 【已修改】：链接管理侧边栏的开关逻辑 (保持不变)
 const openManageLinksPanel = (categoryName) => {
     // 检查是否点击了当前已打开的分类
     if (isManageLinksPanelOpen.value && currentCategoryToManage.value === categoryName) {
@@ -169,9 +212,11 @@ const openLink = () => {
         // 检查用户是否勾选了“始终信任该网站”
         if (shouldTrustInModal.value) {
             // 找到该链接并将其 isTrusted 属性设为 true
+            // 由于 learningLinks 是 computed 且带有 setter，所有修改都将通过 Vue 的响应式系统进行
             learningLinks.value.forEach(group => {
                 const foundLink = group.links.find(l => l.url === linkToOpen.value.url);
                 if (foundLink) {
+                    // 直接修改链接对象，Vue 会追踪到这个深层修改
                     foundLink.isTrusted = true;
                 }
             });
@@ -193,6 +238,7 @@ const closeConfirmModal = () => {
 const removeLink = (category, url) => {
   const group = learningLinks.value.find(g => g.category === category);
   if (group && confirm(`确定要删除链接 "${group.links.find(l => l.url === url)?.name}" 吗？`)) {
+    // 通过替换 links 数组触发响应式更新
     group.links = group.links.filter(link => link.url !== url);
     // 如果在管理侧边栏删除，需要重新计算 linksToManage
     if (currentCategoryToManage.value === category) {
@@ -235,6 +281,7 @@ const addLink = () => {
     }
     // ---------------------------------------------------
 
+    // 通过 push 操作触发响应式更新
     group.links.push({
       name: newLink.value.name,
       url: newUrl, // 使用修正后的 URL
@@ -256,6 +303,7 @@ const addLink = () => {
 
 // 新增：切换链接的信任状态
 const toggleLinkTrust = (link) => {
+    // 直接修改链接对象，触发响应式更新
     link.isTrusted = !link.isTrusted;
 };
 
@@ -279,7 +327,7 @@ const addCategory = () => {
   }
   // ---------------------------------------------------
 
-  // 添加新分类
+  // 通过 push 操作触发 computed setter 的逻辑
   learningLinks.value.push({
     category: name,
     icon: newCategoryIcon.value || '💡',
@@ -294,7 +342,7 @@ const addCategory = () => {
 const removeCategory = (categoryName) => {
   if (!confirm(`确定要删除分类 "${categoryName}" 吗？这将会删除该分类下的所有链接！`)) return;
 
-  // 过滤掉需要删除的分类
+  // 过滤掉需要删除的分类，并通过给 learningLinks.value 赋值触发 computed setter 的逻辑
   learningLinks.value = learningLinks.value.filter(g => g.category !== categoryName);
 
   // 检查链接模态框的默认分类是否被删除，如果是，则更新它
