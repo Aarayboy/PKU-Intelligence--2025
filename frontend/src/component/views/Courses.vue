@@ -52,7 +52,7 @@ const getCourseColor = (course) => {
   return courseColorMap.value[course.id] || '#e5e7eb';
 };
 
-// 加载课表数据（支持模拟数据）
+// 加载课表数据
 const loadSchedule = async (useMock = false) => {
   if (!userData.userId && !useMock) return;
   
@@ -65,13 +65,12 @@ const loadSchedule = async (useMock = false) => {
       userData.updateCourseTable(res.courses || []);
     }
   } catch (err) {
-    setNotification("加载失败", "使用模拟数据展示", false);
+    setNotification("加载失败，请检查后端服务", "使用模拟数据展示", false);
     userData.updateCourseTable(generateMockSchedule());
   }
 };
 
 onMounted(() => {
-  // 开发环境默认使用模拟数据
   loadSchedule(import.meta.env.DEV);
 });
 </script>
@@ -84,10 +83,11 @@ onMounted(() => {
 
     <!-- 课表展示 -->
     <div class="bg-white rounded-lg shadow overflow-hidden border border-black-200">
-      <div class="grid grid-cols-8 border-b border-black-200">
-        <div class="col-span-1 bg-gray-100 p-2 font-medium border-r border-black-200">时间/星期</div>
+      <!-- 表头 -->
+      <div class="grid grid-cols-8">
+        <div class="col-span-1 bg-gray-100 p-2 font-medium border border-black">时间/星期</div>
         <div 
-          class="col-span-1 bg-gray-100 p-2 font-medium text-center border-r border-black-200 last:border-r-0" 
+          class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-black" 
           v-for="day in weekdays" 
           :key="day"
         >
@@ -95,21 +95,20 @@ onMounted(() => {
         </div>
       </div>
       
-      <div v-for="period in 12" :key="period" class="grid grid-cols-8 border-b border-black-200 last:border-b-0">
-        <div class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-black-200">
+      <div v-for="period in 12" :key="period" class="grid grid-cols-8">
+        <div class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-black">
           第{{ period }}节
         </div>
         <div 
-          class="col-span-1 border-r border-black-200 last:border-r-0 p-1 min-h-[100px]"
+          class="col-span-1 p-1 min-h-[100px] border border-black"
           v-for="(day, dayIdx) in weekdays" 
           :key="day"
         >
           <div 
             v-if="userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1))"
-            class="p-2 rounded-md mb-1 border"
+            class="p-2 rounded-md mb-1"
             :style="{ 
-              backgroundColor: getCourseColor(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1))),
-              borderColor: getCourseColor(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)))
+              backgroundColor: getCourseColor(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)))
             }"
           >
             <div class="font-medium text-sm truncate">
@@ -129,11 +128,10 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.grid-cols-7 {
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+.grid-cols-8 {
+  grid-template-columns: repeat(8, minmax(0, 1fr));
 }
 
-/* 确保文字在彩色背景上清晰可见 */
 :deep(.truncate) {
   color: #333;
   text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
