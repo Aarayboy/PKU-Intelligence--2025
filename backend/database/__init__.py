@@ -6,6 +6,20 @@ from .storage import (
     find_user_by_credentials,
     find_user_by_username_or_email,
     get_user,
+    # 新增的方法
+    edit_course,
+    edit_note,
+    add_link_category,
+    get_link_categories,
+    add_useful_link,
+    get_useful_links_by_category,
+    delete_link_category,
+    delete_useful_link,
+    add_task,
+    get_tasks,
+    update_task,
+    delete_task,
+    update_deadlines,
 )
 
 __all__ = [
@@ -16,5 +30,19 @@ __all__ = [
     "add_user",
     "add_course",
     "add_note",
+    # 新增的导出
+    "edit_course",
+    "edit_note",
+    "add_link_category",
+    "get_link_categories",
+    "add_useful_link",
+    "get_useful_links_by_category",
+    "delete_link_category",
+    "delete_useful_link",
+    "add_task",
+    "get_tasks",
+    "update_task",
+    "delete_task",
+    "update_deadlines",
     "seed",
 ]

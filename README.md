@@ -6,9 +6,15 @@ PKU 智慧助手 (PKU-Intelligence) 是一个集成了课程管理、笔记记�
 
 本项目采用前后端分离架构：
 
+<<<<<<< HEAD
 - **前端**: Vue 3 + Vite + Tailwind CSS
 - **后端**: Flask + SQLite
 - **爬虫**: Python (Selenium + BeautifulSoup)
+=======
+```shell
+python seed.py
+```
+>>>>>>> 66cf2ebc7207bceb92b468d6b5b0c32299190dcf
 
 ### 目录结构
 
