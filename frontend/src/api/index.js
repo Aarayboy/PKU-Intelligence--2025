@@ -254,31 +254,9 @@ export async function UpdateLinkCategory({userId, LinkCategory}){
 }
 
 // 课表相关接口
-export async function addCourseToSchedule({ userId, courseData } = {}) {
-  return request("/schedule/add", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      course: courseData
-    }),
-  });
-}
-
 export async function getSchedule(userId) {
   return request(`/schedule?userId=${encodeURIComponent(userId)}`, {
     method: "GET"
-  });
-}
-
-export async function deleteCourseFromSchedule({ userId, courseId } = {}) {
-  return request("/schedule/delete", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      userId,
-      courseId
-    }),
   });
 }
 
@@ -296,7 +274,5 @@ export default {
   EditNote,
   UpdateDDL,
   UpdateLinkCategory,
-  addCourseToSchedule,  // 新增
-  getSchedule,          // 新增
-  deleteCourseFromSchedule // 新增
+  getSchedule,
 };
