@@ -49,7 +49,7 @@ const getTask = computed(() => {
   }
 });
 
-const finishWork = (idx) => {
+const finishWork = async (idx) => {
   console.log("finishWork called with idx:", idx);
   if (idx >= 0 && idx < deadlines.value.length) {
     console.log("edit existing task");
@@ -62,6 +62,7 @@ const finishWork = (idx) => {
     getTask.value.deadline = formatIsoToCustom(getTask.value.deadline);
   } else {
     // add new task
+    console.log("add new task");
     if (!getTask.value.name || !getTask.value.deadline) {
       emit("showNotification", "错误", "任务名称和截止时间不能为空", false);
       return;
@@ -75,6 +76,8 @@ const finishWork = (idx) => {
   }
   // const res = await api.UpdateDDL({ userId: userData.id, deadlines: deadlines.value });
   // TODO: 错误验证
+  console.log(deadlines.value);
+  emit("showNotification", "成功", "任务已保存", true);
   sortTimeLine();
   emit("close");
   emit("done");

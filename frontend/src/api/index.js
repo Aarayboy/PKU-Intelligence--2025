@@ -242,6 +242,17 @@ export async function UpdateDDL({UserId, deadlines}={}) {
   });
 }
 
+export async function UpdateLinkCategory({userId, LinkCategory}){
+  return request("/edit/linkcategory", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: userId,
+      LinkCategory: LinkCategory,
+    }),
+  });
+}
+
 export default {
   getUserData,
   createCourse,
@@ -255,4 +266,5 @@ export default {
   EditCourse,
   EditNote,
   UpdateDDL,
+  UpdateLinkCategory
 };
