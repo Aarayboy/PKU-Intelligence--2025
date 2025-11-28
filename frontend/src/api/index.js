@@ -253,6 +253,13 @@ export async function UpdateLinkCategory({userId, LinkCategory}){
   });
 }
 
+// 课表相关接口
+export async function getSchedule(userId) {
+  return request(`/schedule?userId=${encodeURIComponent(userId)}`, {
+    method: "GET"
+  });
+}
+
 export default {
   getUserData,
   createCourse,
@@ -266,5 +273,6 @@ export default {
   EditCourse,
   EditNote,
   UpdateDDL,
-  UpdateLinkCategory
+  UpdateLinkCategory,
+  getSchedule,
 };

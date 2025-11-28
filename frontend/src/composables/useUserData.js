@@ -20,7 +20,7 @@ class MyCourse {
 class UserData {
   // accept an options object so we can keep backward compatibility and also
   // assign any extra properties that backend may return (e.g. avatar, bio, role)
-  constructor({ courses = [], username = "", userId = null, email = "", deadlines = [], LinkCategorys = []} = {}) {
+  constructor({ courses = [], username = "", userId = null, email = "", deadlines = [], LinkCategorys = [], courseTable = []} = {}) {
     this.username = username;
     this.userId = userId;
     this.email = email;
@@ -33,6 +33,7 @@ class UserData {
         d?.status ?? "",
       ),
     );
+    this.courseTable = new CourseTable(courseTable);
 
     this.LinkCategorys = LinkCategorys.map((lc) =>
       new LinkCategory(
@@ -49,6 +50,10 @@ class UserData {
         ),
       ),
     );
+  }
+
+  updateCourseTable(courses) {
+    this.courseTable = new CourseTable(courses);
   }
 }
 
@@ -80,6 +85,67 @@ class DDL{
     this.status=status;
   }
 }
+
+// For CoursePage
+class Course {
+  constructor({
+    id = '',
+    name = '',
+    teacher = '',
+    location = '',
+    weekType = 0,
+    times = []
+  } = {}) {
+    this.id = id; // 课程唯一标识
+    this.name = name;
+    this.teacher = teacher;
+    this.location = location; // 上课地点
+    this.weekType = weekType; // 周次类型，0-每周，1-单周，2-双周
+    this.times = times; // 上课时间数组, 元素为整型，表示其是这周的第几节课
+    this.timeIndexes = new Set(this.times); // 用于检测时间冲突
+  }
+}
+
+class CourseTable {
+  constructor(courses = []) {
+    this.CourseTableMap = new Map();
+    this.allCourses = [];
+    this.addCourses(courses);
+  }
+
+  addCourses(courses) {
+    const courseList = Array.isArray(courses) ? courses : [courses];
+    courseList.forEach(courseData => {
+      const course = new Course(courseData);
+      this.allCourses.push(course);
+      course.times.forEach(time => {
+        this.CourseTableMap.set(time, course);
+      });
+    });
+  }
+
+  getCourseByIndex(index) {
+    if (!Number.isInteger(index) || index < 0 || index > 83) return null;
+    return this.CourseTableMap.get(index) || null;
+  }
+
+  getCoursesByWeekday(targetWeekday) {
+    if (![1, 2, 3, 4, 5, 6, 7].includes(targetWeekday)) return [];
+    
+    const dayCourses = [];
+    const startIndex = (targetWeekday - 1) * 12;
+    const endIndex = targetWeekday * 12 - 1;
+
+    for (let index = startIndex; index <= endIndex; index++) {
+      const course = this.getCourseByIndex(index);
+      if (course) {
+        dayCourses.push({ ...course, period: (index % 12) + 1, index });
+      }
+    }
+    return dayCourses;
+  }
+}
+
 
 const userData = reactive(new UserData());
 
@@ -163,6 +229,36 @@ async function loadUserData(userId, setNotification) {
     }
     throw err;
   }
+}
+
+// 模拟数据
+export function generateMockSchedule() {
+  return [
+    {
+      id: 1,
+      name: '软件工程',
+      teacher: '孙老师',
+      location: '二教406',
+      weekType: 0,
+      times: [14, 15, 40, 41]
+    },
+    {
+      id: 2,
+      name: '高等数学B',
+      teacher: '李老师',
+      location: '二教202',
+      weekType: 1,
+      times: [24, 25, 38, 39]
+    },
+    {
+      id: 3,
+      name: '线性代数',
+      teacher: '王教授',
+      location: '理教301',
+      weekType: 2,
+      times: [12, 13, 60, 61]
+    }
+  ];
 }
 
 export function useUserData() {
