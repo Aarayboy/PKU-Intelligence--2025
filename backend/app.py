@@ -713,9 +713,9 @@ def updateDeadline():
     else:
         data = request.form or request.values
 
-    userId = data.get("userId")
+    userId = data.get("UserId")
     deadlines = data.get("deadlines")
-
+    print(userId, deadlines)
     if not userId or not deadlines:
         return jsonify({"success": False, "error": "userId 和 deadlines 均为必填"}), 400
 

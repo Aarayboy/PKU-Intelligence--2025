@@ -74,7 +74,8 @@ const finishWork = async (idx) => {
       status: parseInt(selectNumber.value),
     });
   }
-  // const res = await api.UpdateDDL({ userId: userData.id, deadlines: deadlines.value });
+  console.log(userData.userId)
+  const res = await api.UpdateDDL({ UserId: userData.userId, deadlines: deadlines.value });
   // TODO: 错误验证
   console.log(deadlines.value);
   emit("showNotification", "成功", "任务已保存", true);

@@ -4,7 +4,7 @@ const userData = inject("userData");
 const DdlIdx = inject("DdlIdx");
 const emit = defineEmits(["DdlDetail"]);
 const deadlines = computed(() => userData.deadlines);
-
+import api from "@/api";
 // const deadlines = ref([
 //   {
 //     name: "提交作业1",
@@ -53,7 +53,7 @@ function finishWork(idx){
     if (elem) {
       elem.classList.add("hidden");
     }
-    // const res = await api.UpdateDDL({ userId: userData.id, deadlines: deadlines.value });
+    const res = await api.UpdateDDL({ UserId: userData.userId, deadlines: deadlines.value });
     // TODO: 错误验证
   }, 300);
 };
