@@ -55,8 +55,16 @@ def userdata():
     """
     
     # 添加上实例 ddl 列表
-    deadlines = [{"name": "提交作业1", "deadline": "2024-10-01 23:59", "message": "balabala", "status": 0},
-                 {"name": "项目报告", "deadline": "2024-10-15 17:00", "message": "balabala", "status": 1}]
+    deadlines = [{"name": "提交作业1", "deadline": "2025-10-01 23:59", "message": "balabala", "status": 0},
+                 {"name": "项目报告", "deadline": "2025-10-15 17:00", "message": "balabala", "status": 1},
+                 {"name": "期中考试复习", "deadline": "2025-10-20 12:00", "message": "为什么要演奏春日影", "status": 0},
+                 {"name": "实验报告提交", "deadline": "2025-10-25 18:00", "message": "balabala", "status": 1},
+                 {"name": "阅读论文", "deadline": "2025-10-30 20:00", "message": "balabala", "status": 0},
+                 {"name": "准备演讲", "deadline": "2025-11-05 15:00", "message": "balabala", "status": 1},
+                 {"name": "期末考试复习", "deadline": "2025-11-20 10:00", "message": "balabala", "status": 0},
+                 {"name": "提交毕业论文", "deadline": "2026-12-01 23:59", "message": "balabala", "status": 1},
+
+                 ]
 
     """ 还要添加 linkCategories 字段，这里没有实例数据，实际应用中应从数据库获取并返回
     """
