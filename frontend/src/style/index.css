@@ -27,9 +27,9 @@
 }
 
 .urgent{
- @apply bg-red-400 hover:bg-red-600 ring-red-200
+ @apply border-l-6 border-red-500
 }
 
 .no-urgent{
-  @apply bg-green-400 hover:bg-green-600 ring-green-200
+  @apply border-l-6 border-green-500
 }
