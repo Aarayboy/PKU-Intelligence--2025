@@ -824,3 +824,206 @@ class Database:
         except sqlite3.Error as e:
             print(f"数据库错误: {e}")
             return False
+
+
+        def add_course_schedule(self, user_id, name, teacher, location, week_type, times):
+            """
+            添加课程表
+            times: 时间索引列表 [14, 15, 40, 41] 等
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    # 插入课程表基本信息
+                    cursor.execute(
+                        "INSERT INTO course_schedules (name, teacher, location, week_type, user_id) VALUES (?, ?, ?, ?, ?)",
+                        (name, teacher, location, week_type, user_id)
+                    )
+                    schedule_id = cursor.lastrowid
+                    
+                    # 插入上课时间
+                    for time_index in times:
+                        cursor.execute(
+                            "INSERT INTO course_schedule_times (course_schedule_id, time_index) VALUES (?, ?)",
+                            (schedule_id, time_index)
+                        )
+                    
+                    # 查询并返回完整的课程表信息
+                    return self._get_course_schedule_by_id(schedule_id)
+            except sqlite3.Error as e:
+                print(f"添加课程表时发生数据库错误: {e}")
+                return None
+
+        def get_course_schedules(self, user_id):
+            """
+            获取用户的所有课程表
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                # 获取所有课程表基本信息
+                cursor.execute(
+                    "SELECT * FROM course_schedules WHERE user_id = ? ORDER BY name",
+                    (user_id,)
+                )
+                schedules = cursor.fetchall()
+                
+                result = []
+                for schedule in schedules:
+                    schedule_dict = dict(schedule)
+                    # 获取该课程的上课时间
+                    cursor.execute(
+                        "SELECT time_index FROM course_schedule_times WHERE course_schedule_id = ? ORDER BY time_index",
+                        (schedule_dict['id'],)
+                    )
+                    times = [row['time_index'] for row in cursor.fetchall()]
+                    
+                    # 组装成与前端 Course 类一致的结构
+                    result.append({
+                        "id": schedule_dict['id'],
+                        "name": schedule_dict['name'],
+                        "teacher": schedule_dict['teacher'] or "",
+                        "location": schedule_dict['location'] or "",
+                        "weekType": schedule_dict['week_type'],
+                        "times": times
+                    })
+                
+                return result
+            except sqlite3.Error as e:
+                print(f"获取课程表时发生数据库错误: {e}")
+                return []
+
+        def update_course_schedule(self, user_id, schedule_id, **updates):
+            """
+            更新课程表信息
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    # 允许更新的字段
+                    allowed_fields = ['name', 'teacher', 'location', 'week_type']
+                    update_fields = {}
+                    
+                    for field in allowed_fields:
+                        if field in updates:
+                            update_fields[field] = updates[field]
+                    
+                    # 如果有基本信息需要更新
+                    if update_fields:
+                        set_clause = ", ".join([f"{key} = ?" for key in update_fields.keys()])
+                        values = list(update_fields.values())
+                        values.extend([schedule_id, user_id])
+                        
+                        cursor.execute(
+                            f"UPDATE course_schedules SET {set_clause} WHERE id = ? AND user_id = ?",
+                            values
+                        )
+                    
+                    # 如果需要更新上课时间
+                    if 'times' in updates:
+                        # 先删除原有时间
+                        cursor.execute(
+                            "DELETE FROM course_schedule_times WHERE course_schedule_id = ?",
+                            (schedule_id,)
+                        )
+                        
+                        # 插入新的时间
+                        for time_index in updates['times']:
+                            cursor.execute(
+                                "INSERT INTO course_schedule_times (course_schedule_id, time_index) VALUES (?, ?)",
+                                (schedule_id, time_index)
+                            )
+                    
+                    return True
+            except sqlite3.Error as e:
+                print(f"更新课程表时发生数据库错误: {e}")
+                return False
+
+        def delete_course_schedule(self, user_id, schedule_id):
+            """
+            删除课程表（会级联删除上课时间）
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    cursor.execute(
+                        "DELETE FROM course_schedules WHERE id = ? AND user_id = ?",
+                        (schedule_id, user_id)
+                    )
+                    return cursor.rowcount > 0
+            except sqlite3.Error as e:
+                print(f"删除课程表时发生数据库错误: {e}")
+                return False
+
+        def update_course_table(self, user_id, course_table):
+            """
+            批量更新用户的课表
+            course_table: 课程对象列表，格式与前端 CourseTable 一致
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    # 先删除用户的所有现有课表（会级联删除上课时间）
+                    cursor.execute("DELETE FROM course_schedules WHERE user_id = ?", (user_id,))
+                    
+                    # 批量插入新课表
+                    for course in course_table:
+                        cursor.execute(
+                            "INSERT INTO course_schedules (name, teacher, location, week_type, user_id) VALUES (?, ?, ?, ?, ?)",
+                            (
+                                course.get('name', ''),
+                                course.get('teacher', ''),
+                                course.get('location', ''),
+                                course.get('weekType', 0),
+                                user_id
+                            )
+                        )
+                        schedule_id = cursor.lastrowid
+                        
+                        # 插入上课时间
+                        for time_index in course.get('times', []):
+                            cursor.execute(
+                                "INSERT INTO course_schedule_times (course_schedule_id, time_index) VALUES (?, ?)",
+                                (schedule_id, time_index)
+                            )
+                    
+                    return True
+            except sqlite3.Error as e:
+                print(f"更新课表时发生数据库错误: {e}")
+                return False
+
+        def _get_course_schedule_by_id(self, schedule_id):
+            """
+            根据ID获取课程表信息（内部方法）
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            
+            # 获取课程表基本信息
+            cursor.execute("SELECT * FROM course_schedules WHERE id = ?", (schedule_id,))
+            schedule = cursor.fetchone()
+            
+            if not schedule:
+                return None
+            
+            schedule_dict = dict(schedule)
+            
+            # 获取上课时间
+            cursor.execute(
+                "SELECT time_index FROM course_schedule_times WHERE course_schedule_id = ? ORDER BY time_index",
+                (schedule_id,)
+            )
+            times = [row['time_index'] for row in cursor.fetchall()]
+            
+            return {
+                "id": schedule_dict['id'],
+                "name": schedule_dict['name'],
+                "teacher": schedule_dict['teacher'] or "",
+                "location": schedule_dict['location'] or "",
+                "weekType": schedule_dict['week_type'],
+                "times": times
+            }
