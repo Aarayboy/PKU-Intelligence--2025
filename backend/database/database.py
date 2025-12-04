@@ -193,21 +193,18 @@ class Database:
         )
 
         # 创建任务管理表
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS tasks (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT,
-                deadline TEXT, -- 存储日期时间字符串
-                priority INTEGER DEFAULT 1, -- 优先级：1-低，2-中，3-高
-                completed BOOLEAN DEFAULT FALSE,
+                name TEXT NOT NULL,           -- 对应 deadlines 列表中的 name
+                deadline TEXT NOT NULL,       -- 截止日期时间字符串
+                message TEXT,                 -- 对应 message，允许为空
+                status TEXT DEFAULT 'pending', -- 状态: pending, completed, overdue 等
                 user_id INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )
-        """
-        )
+        """)
         cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS ix_tasks_user_id ON tasks(user_id)
@@ -223,6 +220,43 @@ class Database:
         cursor.execute(
             "INSERT OR IGNORE INTO users (id, username, email, password) VALUES (1, 'admin', 'admin@example.com', 'adminpass')"
         )
+        # 创建课表表
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS course_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,               -- 课程名称
+                teacher TEXT,                     -- 教师姓名
+                location TEXT,                    -- 上课地点
+                week_type INTEGER DEFAULT 0,      -- 周次类型：0-每周，1-单周，2-双周
+                user_id INTEGER NOT NULL,         -- 用户ID
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """)
+
+        # 创建上课时间表（多对多关系，因为一门课可能有多个上课时间）
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS course_schedule_times (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                course_schedule_id INTEGER NOT NULL,  -- 课程表ID
+                time_index INTEGER NOT NULL,          -- 时间索引（0-83，对应一周的课程时间段）
+                FOREIGN KEY (course_schedule_id) REFERENCES course_schedules (id) ON DELETE CASCADE,
+                UNIQUE(course_schedule_id, time_index)  -- 确保同一门课同一时间不重复
+            )
+        """)
+
+        # 创建索引
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS ix_course_schedules_user_id ON course_schedules(user_id)
+        """)
+
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS ix_course_schedule_times_course_id ON course_schedule_times(course_schedule_id)
+        """)
+
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS ix_course_schedule_times_time_index ON course_schedule_times(time_index)
+        """)
 
         conn.commit()
         # 注意：这里不关闭连接，因为它被线程局部存储管理了
@@ -674,7 +708,7 @@ class Database:
             return False
 
     # 任务管理相关方法
-    def add_task(self, user_id, title, description, deadline, priority=1):
+    def add_task(self, user_id, name, deadline, message="", status="pending"):
         """
         添加任务
         """
@@ -683,8 +717,8 @@ class Database:
         try:
             with conn:
                 cursor.execute(
-                    "INSERT INTO tasks (title, description, deadline, priority, user_id) VALUES (?, ?, ?, ?, ?)",
-                    (title, description, deadline, priority, user_id)
+                    "INSERT INTO tasks (name, deadline, message, status, user_id) VALUES (?, ?, ?, ?, ?)",
+                    (name, deadline, message, status, user_id)
                 )
                 task_id = cursor.lastrowid
                 
@@ -697,17 +731,27 @@ class Database:
 
     def get_tasks(self, user_id):
         """
-        获取用户的任务列表
+        获取用户的任务列表，返回格式与 deadlines 数据结构一致
         """
         conn = self.get_db_connection()
         cursor = conn.cursor()
         try:
             cursor.execute(
-                "SELECT * FROM tasks WHERE user_id = ? ORDER BY deadline ASC, priority DESC",
+                "SELECT * FROM tasks WHERE user_id = ? ORDER BY deadline ASC",
                 (user_id,)
             )
             tasks = cursor.fetchall()
-            return [dict(task) for task in tasks]
+            # 转换为 deadlines 数据结构
+            deadlines = []
+            for task in tasks:
+                task_dict = dict(task)
+                deadlines.append({
+                    "name": task_dict['name'],
+                    "deadline": task_dict['deadline'],
+                    "message": task_dict['message'] or "",
+                    "status": task_dict['status']
+                })
+            return deadlines
         except sqlite3.Error as e:
             print(f"数据库错误: {e}")
             return []
@@ -754,7 +798,7 @@ class Database:
     def update_deadlines(self, user_id, deadlines):
         """
         批量更新用户的DDL列表
-        deadlines: 任务对象列表
+        deadlines: 任务对象列表，格式为 [{"name": "...", "deadline": "...", "message": "...", "status": "..."}, ...]
         """
         conn = self.get_db_connection()
         cursor = conn.cursor()
@@ -766,13 +810,12 @@ class Database:
                 # 批量插入新任务
                 for task in deadlines:
                     cursor.execute(
-                        "INSERT INTO tasks (title, description, deadline, priority, completed, user_id) VALUES (?, ?, ?, ?, ?, ?)",
+                        "INSERT INTO tasks (name, deadline, message, status, user_id) VALUES (?, ?, ?, ?, ?)",
                         (
-                            task.get('title', ''),
-                            task.get('description', ''),
+                            task.get('name', ''),
                             task.get('deadline', ''),
-                            task.get('priority', 1),
-                            task.get('completed', False),
+                            task.get('message', ''),
+                            task.get('status', 'pending'),
                             user_id
                         )
                     )

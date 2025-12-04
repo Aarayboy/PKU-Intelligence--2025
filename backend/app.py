@@ -48,27 +48,19 @@ def userdata():
     if not user:
         return jsonify({"error": "user not found"}), 404
     
-    # Return user data with courses
-
-    """ 这里添加了示例的 ddl 列表，实际应用中应从数据库获取并返回
-    YOU CODE HERE
-    """
+    # 从数据库获取用户的 deadlines（任务列表）
+    deadlines = storage.get_tasks(user_id)
     
-    # 添加上实例 ddl 列表
-    deadlines = [{"name": "提交作业1", "deadline": "2025-10-01 23:59", "message": "balabala", "status": 0},
-                 {"name": "项目报告", "deadline": "2025-10-15 17:00", "message": "balabala", "status": 1},
-                 {"name": "期中考试复习", "deadline": "2025-10-20 12:00", "message": "为什么要演奏春日影", "status": 0},
-                 {"name": "实验报告提交", "deadline": "2025-10-25 18:00", "message": "balabala", "status": 1},
-                 {"name": "阅读论文", "deadline": "2025-10-30 20:00", "message": "balabala", "status": 0},
-                 {"name": "准备演讲", "deadline": "2025-11-05 15:00", "message": "balabala", "status": 1},
-                 {"name": "期末考试复习", "deadline": "2025-11-20 10:00", "message": "balabala", "status": 0},
-                 {"name": "提交毕业论文", "deadline": "2026-12-01 23:59", "message": "balabala", "status": 1},
-
-                 ]
-
-    """ 还要添加 linkCategories 字段，这里没有实例数据，实际应用中应从数据库获取并返回
-    """
+    # 获取用户的 linkCategories
+    linkCategories = storage.get_useful_links_by_category(user_id)
+    
+    # 获取用户的 courseTable
+    courseTable = storage.get_course_schedules(user_id)
+    
     user["deadlines"] = deadlines
+    user["linkCategories"] = linkCategories
+    user["courseTable"] = courseTable
+    
     return jsonify({"data": user})
 
 
@@ -568,10 +560,9 @@ def get_links():
     if not userId:
         return jsonify({"success": False, "error": "userId 为必填"}), 400
 
-    links_by_category = storage.get_useful_links_by_category(userId)
+    categories = storage.get_useful_links_by_category(userId)
     
-    return jsonify({"success": True, "categories": links_by_category}), 200
-
+    return jsonify({"success": True, "categories": categories}), 200
 
 @app.route("/links/categories/<int:category_id>", methods=["DELETE"])
 def delete_link_category(category_id):
@@ -616,7 +607,7 @@ def delete_link(link_id):
 def create_task():
     """
     创建任务
-    需要参数：userId, title, description(可选), deadline, priority(可选)
+    需要参数：userId, name, deadline, message(可选), status(可选)
     """
     data = None
     if request.is_json:
@@ -625,15 +616,15 @@ def create_task():
         data = request.form or request.values
     
     userId = data.get("userId")
-    title = data.get("title")
-    description = data.get("description", "")
+    name = data.get("name")
     deadline = data.get("deadline")
-    priority = data.get("priority", 1)
+    message = data.get("message", "")
+    status = data.get("status", "pending")
 
-    if not userId or not title or not deadline:
-        return jsonify({"success": False, "error": "userId, title, deadline 均为必填"}), 400
+    if not userId or not name or not deadline:
+        return jsonify({"success": False, "error": "userId, name, deadline 均为必填"}), 400
 
-    new_task = storage.add_task(userId, title, description, deadline, priority)
+    new_task = storage.add_task(userId, name, deadline, message, status)
     
     if not new_task:
         return jsonify({"success": False, "error": "创建任务失败"}), 500
@@ -644,7 +635,7 @@ def create_task():
 @app.route("/tasks", methods=["GET"])
 def get_tasks():
     """
-    获取用户的任务列表
+    获取用户的任务列表（返回格式与deadlines一致）
     需要参数：userId
     """
     userId = request.args.get("userId")
@@ -652,16 +643,15 @@ def get_tasks():
     if not userId:
         return jsonify({"success": False, "error": "userId 为必填"}), 400
 
-    tasks = storage.get_tasks(userId)
+    deadlines = storage.get_tasks(userId)
     
-    return jsonify({"success": True, "tasks": tasks}), 200
-
+    return jsonify({"success": True, "deadlines": deadlines}), 200
 
 @app.route("/tasks/<int:task_id>", methods=["PUT"])
 def update_task(task_id):
     """
     更新任务信息
-    需要参数：userId, 以及要更新的字段（title, description, deadline, priority, completed）
+    需要参数：userId, 以及要更新的字段（name, deadline, message, status）
     """
     data = None
     if request.is_json:
@@ -674,9 +664,9 @@ def update_task(task_id):
     if not userId:
         return jsonify({"success": False, "error": "userId 为必填"}), 400
 
-    # 提取可更新的字段
+    # 提取可更新的字段（现在字段名已更改）
     updates = {}
-    for field in ['title', 'description', 'deadline', 'priority', 'completed']:
+    for field in ['name', 'deadline', 'message', 'status']:
         if field in data:
             updates[field] = data[field]
 
@@ -714,6 +704,7 @@ def updateDeadline():
     """
     更新用户的DDL列表
     需要参数：userId, deadlines（任务对象列表）
+    每个任务对象格式：{"name": "...", "deadline": "...", "message": "...", "status": "..."}
     """
     data = None
     if request.is_json:
@@ -721,7 +712,7 @@ def updateDeadline():
     else:
         data = request.form or request.values
 
-    userId = data.get("UserId")
+    userId = data.get("UserId") or data.get("userId")
     deadlines = data.get("deadlines")
     print(userId, deadlines)
     if not userId or not deadlines:
@@ -749,14 +740,181 @@ def updateLinkCategory():
     userId = data.get("userId")
     linkCategories = data.get("linkCategories")
 
-    """ TODO:
-    更改用户的链接分类
-    YOU CODE HERE
-    """
+    if not userId or not linkCategories:
+        return jsonify({"success": False, "error": "userId 和 linkCategories 均为必填"}), 400
     
-    # 如果成功更新，示例返回 
-    return jsonify({"success": True, "message": "Link categories updated"}), 200
+    try:
+        # 删除用户现有的所有链接分类和链接
+        conn = storage.get_db_connection()
+        cursor = conn.cursor()
+        
+        # 注意：这里使用级联删除，会同时删除该分类下的链接
+        cursor.execute("DELETE FROM link_categories WHERE user_id = ?", (userId,))
+        
+        # 插入新的链接分类和链接
+        for category in linkCategories:
+            # 插入分类
+            cursor.execute(
+                "INSERT INTO link_categories (category, icon, user_id, sort_order) VALUES (?, ?, ?, ?)",
+                (category['category'], category['icon'], userId, category.get('sort_order', 0))
+            )
+            category_id = cursor.lastrowid
+            
+            # 插入该分类下的链接
+            for link in category.get('links', []):
+                cursor.execute(
+                    "INSERT INTO useful_links (name, url, description, is_trusted, category_id, user_id, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        link['name'],
+                        link['url'],
+                        link.get('desc', ''),
+                        link.get('isTrusted', False),
+                        category_id,
+                        userId,
+                        link.get('sort_order', 0)
+                    )
+                )
+        
+        conn.commit()
+        return jsonify({"success": True, "message": "Link categories updated"}), 200
+        
+    except Exception as e:
+        print(f"更新链接分类时出错: {e}")
+        return jsonify({"success": False, "error": "更新链接分类失败"}), 500
+    
+
+
+# 课表相关接口
+@app.route("/course-table", methods=["POST"])
+def create_course_schedule():
+    """
+    创建课程表
+    需要参数：userId, name, teacher(可选), location(可选), weekType(可选), times
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    name = data.get("name")
+    teacher = data.get("teacher", "")
+    location = data.get("location", "")
+    week_type = data.get("weekType", 0)
+    times = data.get("times", [])
+    
+    if not userId or not name or not times:
+        return jsonify({"success": False, "error": "userId, name, times 均为必填"}), 400
+    
+    # 验证 times 是整数列表
+    if not isinstance(times, list) or not all(isinstance(t, int) for t in times):
+        return jsonify({"success": False, "error": "times 必须是整数列表"}), 400
+    
+    new_schedule = storage.add_course_schedule(userId, name, teacher, location, week_type, times)
+    
+    if not new_schedule:
+        return jsonify({"success": False, "error": "创建课程表失败"}), 500
+    
+    return jsonify({"success": True, "course": new_schedule}), 201
+
+@app.route("/course-table", methods=["GET"])
+def get_course_table():
+    """
+    获取用户的课表
+    需要参数：userId
+    """
+    userId = request.args.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+    
+    course_table = storage.get_course_schedules(userId)
+    
+    return jsonify({"success": True, "courseTable": course_table}), 200
+
+@app.route("/course-table/<int:schedule_id>", methods=["PUT"])
+def update_course_schedule_route(schedule_id):
+    """
+    更新课程表
+    需要参数：userId, 以及要更新的字段（name, teacher, location, weekType, times）
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+    
+    # 提取可更新的字段
+    updates = {}
+    allowed_fields = ['name', 'teacher', 'location', 'weekType', 'times']
+    
+    for field in allowed_fields:
+        if field in data:
+            # 将 weekType 转换为数据库字段名
+            db_field = 'week_type' if field == 'weekType' else field
+            updates[db_field] = data[field]
+    
+    if not updates:
+        return jsonify({"success": False, "error": "没有提供要更新的字段"}), 400
+    
+    success = storage.update_course_schedule(userId, schedule_id, **updates)
+    
+    if not success:
+        return jsonify({"success": False, "error": "更新课程表失败"}), 400
+    
+    return jsonify({"success": True, "message": "课程表更新成功"}), 200
+
+@app.route("/course-table/<int:schedule_id>", methods=["DELETE"])
+def delete_course_schedule_route(schedule_id):
+    """
+    删除课程表
+    需要参数：userId
+    """
+    userId = request.args.get("userId")
+    
+    if not userId:
+        return jsonify({"success": False, "error": "userId 为必填"}), 400
+    
+    success = storage.delete_course_schedule(userId, schedule_id)
+    
+    if not success:
+        return jsonify({"success": False, "error": "删除课程表失败"}), 400
+    
+    return jsonify({"success": True, "message": "课程表删除成功"}), 200
+
+@app.route("/edit/course-table", methods=["POST"])
+def update_course_table():
+    """
+    批量更新用户的课表
+    需要参数：userId, courseTable（课程对象列表）
+    """
+    data = None
+    if request.is_json:
+        data = request.get_json()
+    else:
+        data = request.form or request.values
+    
+    userId = data.get("userId")
+    course_table = data.get("courseTable")
+    
+    if not userId or not course_table:
+        return jsonify({"success": False, "error": "userId 和 courseTable 均为必填"}), 400
+    
+    success = storage.update_course_table(userId, course_table)
+    
+    if not success:
+        return jsonify({"success": False, "error": "更新课表失败"}), 500
+    
+    return jsonify({"success": True, "message": "课表更新成功"}), 200
 
 if __name__ == "__main__":
     # Run on port 4000
     app.run(host="0.0.0.0", port=4000, debug=True)
+
+
