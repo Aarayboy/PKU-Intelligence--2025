@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 
 import spider.login as login
 import spider.spider as spider
+import spider.ddl_LLM as ddl_LLM
 from database import storage
 
 dotenv.load_dotenv()
@@ -55,11 +56,11 @@ def userdata():
     linkCategories = storage.get_useful_links_by_category(user_id)
     
     # 获取用户的 courseTable
-    courseTable = storage.get_course_schedules(user_id)
+    # courseTable = storage.get_course_schedules(user_id)
     
     user["deadlines"] = deadlines
     user["linkCategories"] = linkCategories
-    user["courseTable"] = courseTable
+    # user["courseTable"] = courseTable
     
     return jsonify({"data": user})
 
@@ -361,7 +362,7 @@ def cloud_status():
         downloaded_files = spider.download_handouts_for_course(
             _session,
             course_id=course,
-            section_names=["课程讲义", "课程文件"],
+            section_names=["课程讲义", "课程文件", "教学内容"],
             max_files=3,
             download_root="uploads",
         )  # section_names 想加啥加啥
@@ -426,13 +427,59 @@ def cloud_status():
                 )
                 print(f"✗ 创建笔记失败: {note_title}")
 
-        # 最后返回信息
+        # 点一次🌧，顺便把任务列表（DDL）也同步一下
+        payload = ddl_LLM.build_deadline_payload_with_llm(
+            _session,
+            user_id=userId
+        )
+
+        deadlines = payload.get("deadlines", [])   # LLM 解析出的 DDL 列表
+        created_tasks = []                         # 实际写入 tasks 表的记录
+
+        for item in deadlines:
+            # 从每一条 deadline 中取出字段
+            name = item.get("name")
+            deadline_str = item.get("deadline")
+            message = item.get("message")
+            status = item.get("status")   # LLM 现在用 0/1 表示紧急/不紧急
+
+            if deadline_str is None:
+                deadline_str = "None"
+
+            # 数据库存的是字符串，这里做个简单映射
+            if isinstance(status, int):
+                status_str = "0" if status == 0 else "1"
+            else:
+                status_str = status or "1"
+
+            new_task = storage.add_task(userId, name, deadline_str, message, status_str)
+
+            if new_task:
+                created_tasks.append(new_task)
+            else:
+                print(f"创建任务失败: {name} - {deadline_str}")
+
+        # 最后合并返回
         return (
             jsonify(
-                {"success": True, "message": f"准备爬取课程: {course}", "courses": []}
+                {
+                    "success": True,
+                    "message": f"准备爬取课程: {course}",
+                    "courses": [],        # 保留原来返回的字段
+                    "notes": results,     # 本次创建的笔记信息
+                    "deadlines": deadlines,   # LLM 解析出来的 DDL 原始数据
+                    "tasks": created_tasks,   # 实际写入数据库的任务记录
+                }
             ),
             200,
         )
+        # # 最后返回信息
+        # return (
+        #     jsonify(
+        #         {"success": True, "message": f"准备爬取课程: {course}", "courses": []}
+        #     ),
+        #     200,
+        # )
 
 
 @app.route("/edit/course", methods=["POST"])
@@ -601,103 +648,6 @@ def delete_link(link_id):
     
     return jsonify({"success": True, "message": "链接删除成功"}), 200
 
-
-# 任务管理相关接口
-@app.route("/tasks", methods=["POST"])
-def create_task():
-    """
-    创建任务
-    需要参数：userId, name, deadline, message(可选), status(可选)
-    """
-    data = None
-    if request.is_json:
-        data = request.get_json()
-    else:
-        data = request.form or request.values
-    
-    userId = data.get("userId")
-    name = data.get("name")
-    deadline = data.get("deadline")
-    message = data.get("message", "")
-    status = data.get("status", "pending")
-
-    if not userId or not name or not deadline:
-        return jsonify({"success": False, "error": "userId, name, deadline 均为必填"}), 400
-
-    new_task = storage.add_task(userId, name, deadline, message, status)
-    
-    if not new_task:
-        return jsonify({"success": False, "error": "创建任务失败"}), 500
-    
-    return jsonify({"success": True, "task": new_task}), 201
-
-
-@app.route("/tasks", methods=["GET"])
-def get_tasks():
-    """
-    获取用户的任务列表（返回格式与deadlines一致）
-    需要参数：userId
-    """
-    userId = request.args.get("userId")
-    
-    if not userId:
-        return jsonify({"success": False, "error": "userId 为必填"}), 400
-
-    deadlines = storage.get_tasks(userId)
-    
-    return jsonify({"success": True, "deadlines": deadlines}), 200
-
-@app.route("/tasks/<int:task_id>", methods=["PUT"])
-def update_task(task_id):
-    """
-    更新任务信息
-    需要参数：userId, 以及要更新的字段（name, deadline, message, status）
-    """
-    data = None
-    if request.is_json:
-        data = request.get_json()
-    else:
-        data = request.form or request.values
-    
-    userId = data.get("userId")
-    
-    if not userId:
-        return jsonify({"success": False, "error": "userId 为必填"}), 400
-
-    # 提取可更新的字段（现在字段名已更改）
-    updates = {}
-    for field in ['name', 'deadline', 'message', 'status']:
-        if field in data:
-            updates[field] = data[field]
-
-    if not updates:
-        return jsonify({"success": False, "error": "没有提供要更新的字段"}), 400
-
-    success = storage.update_task(userId, task_id, **updates)
-    
-    if not success:
-        return jsonify({"success": False, "error": "更新任务失败"}), 400
-    
-    return jsonify({"success": True, "message": "任务更新成功"}), 200
-
-
-@app.route("/tasks/<int:task_id>", methods=["DELETE"])
-def delete_task(task_id):
-    """
-    删除任务
-    需要参数：userId
-    """
-    userId = request.args.get("userId")
-    
-    if not userId:
-        return jsonify({"success": False, "error": "userId 为必填"}), 400
-
-    success = storage.delete_task(userId, task_id)
-    
-    if not success:
-        return jsonify({"success": False, "error": "删除任务失败"}), 400
-    
-    return jsonify({"success": True, "message": "任务删除成功"}), 200
 
 @app.route("/edit/deadline", methods=["POST"])
 def updateDeadline():
