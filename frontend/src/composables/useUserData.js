@@ -124,6 +124,23 @@ class CourseTable {
     });
   }
 
+  addCourse(courseData) {
+    const course = new Course(courseData);
+    this.allCourses.push(course);
+    course.times.forEach(time => {
+      this.CourseTableMap.set(time, course);
+    });
+  }
+
+  removeCourse(courseId) {
+    this.allCourses = this.allCourses.filter(course => course.id !== courseId);
+    this.CourseTableMap.forEach((course, time) => {
+      if (course.id === courseId) {
+        this.CourseTableMap.delete(time);
+      }
+    });
+  }
+
   getCourseByIndex(index) {
     if (!Number.isInteger(index) || index < 0 || index > 83) return null;
     return this.CourseTableMap.get(index) || null;

@@ -70,6 +70,70 @@ const loadSchedule = async (useMock = false) => {
   }
 };
 
+const newCourse = ref({
+  id: "",
+  name: "",
+  teacher: "",
+  location: "",
+  weekType: 0,
+  times: []
+});
+
+// 新增课程
+const addCourse = () => {
+  if (!newCourse.value.name || !newCourse.value.teacher || !newCourse.value.location) {
+    setNotification("请填写完整的课程信息", "错误", false);
+    return;
+  }
+
+  // 自动生成课程ID和时间
+  newCourse.value.id = Date.now().toString(); // 简单生成唯一ID
+  newCourse.value.times = [0, 1]; // 示例时间，需根据实际需求调整
+
+  userData.courseTable.addCourse(newCourse.value);
+
+  // 清空表单
+  newCourse.value = { id: "", name: "", teacher: "", location: "", weekType: 0, times: [] };
+};
+
+const removeCourse = (courseId) => {
+  userData.courseTable.removeCourse(courseId);
+};
+
+const hasCoursesByDay = computed(() => {
+  return weekdays.map((_, dayIdx) => {
+    // 检查该天是否有任何课程
+    for (let period = 0; period < 12; period++) {
+      if (userData.courseTable.getCourseByIndex(dayIdx * 12 + period)) {
+        return true;
+      }
+    }
+    return false;
+  });
+});
+
+const hasCoursesByPeriod = computed(() => {
+  return Array.from({ length: 12 }, (_, period) => {
+    // 检查该节课是否有任何课程
+    for (let dayIdx = 0; dayIdx < 7; dayIdx++) {
+      if (userData.courseTable.getCourseByIndex(dayIdx * 12 + period)) {
+        return true;
+      }
+    }
+    return false;
+  });
+});
+
+// 获取列宽样式
+const getColumnWidth = (dayIdx) => {
+  return hasCoursesByDay.value[dayIdx] ? '1fr' : '8px';
+};
+
+// 获取行高样式
+const getRowHeight = (period) => {
+  return hasCoursesByPeriod.value[period] ? 'min-h-[100px]' : '8px';
+};
+
 onMounted(() => {
   loadSchedule(import.meta.env.DEV);
 });
@@ -81,28 +145,68 @@ onMounted(() => {
       <h2 class="text-2xl font-bold">我的课表</h2>
     </div>
 
+    <!-- 新增课程表单 -->
+    <div class="mb-6">
+      <h3 class="text-lg font-medium mb-2">新增课程</h3>
+      <form @submit.prevent="addCourse">
+        <div class="grid grid-cols-4 gap-4">
+          <input
+            v-model="newCourse.name"
+            type="text"
+            placeholder="课程名称"
+            class="border p-2 rounded"
+            required
+          />
+          <input
+            v-model="newCourse.teacher"
+            type="text"
+            placeholder="教师名称"
+            class="border p-2 rounded"
+            required
+          />
+          <input
+            v-model="newCourse.location"
+            type="text"
+            placeholder="上课地点"
+            class="border p-2 rounded"
+            required
+          />
+          <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">
+            添加课程
+          </button>
+        </div>
+      </form>
+    </div>
+
     <!-- 课表展示 -->
-    <div class="bg-white rounded-lg shadow overflow-hidden border border-black-200">
+    <div class="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
       <!-- 表头 -->
       <div class="grid grid-cols-8">
-        <div class="col-span-1 bg-gray-100 p-2 font-medium border border-black">时间/星期</div>
+        <div class="col-span-1 bg-gray-100 p-2 font-medium border border-gray-300">时间/星期</div>
         <div 
-          class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-black" 
-          v-for="day in weekdays" 
+          class="p-2 font-medium text-center border border-gray-300" 
+          v-for="(day, dayIdx) in weekdays" 
           :key="day"
+          :style="{ width: getColumnWidth(dayIdx) }"
         >
-          {{ day }}
+          <span v-if="hasCoursesByDay[dayIdx]">{{ day }}</span>
         </div>
       </div>
       
-      <div v-for="period in 12" :key="period" class="grid grid-cols-8">
-        <div class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-black">
-          第{{ period }}节
+      <div 
+        v-for="period in 12" 
+        :key="period" 
+        class="grid grid-cols-8"
+        :style="{ height: getRowHeight(period - 1) }"
+      >
+        <div class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-gray-300">
+          <span v-if="hasCoursesByPeriod[period - 1]">第{{ period }}节</span>
         </div>
         <div 
-          class="col-span-1 p-1 min-h-[100px] border border-black"
+          class="p-1 border border-gray-300"
           v-for="(day, dayIdx) in weekdays" 
           :key="day"
+          :style="{ width: getColumnWidth(dayIdx) }"
         >
           <div 
             v-if="userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1))"
@@ -120,6 +224,13 @@ onMounted(() => {
             <div class="text-xs text-gray-600 truncate">
               {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).location }}
             </div>
+            <!-- 删除课程按钮 -->
+            <button 
+              @click="removeCourse(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).id)"
+              class="text-red-500 text-xs mt-1"
+            >
+              删除
+            </button>
           </div>
         </div>
       </div>
@@ -129,11 +240,13 @@ onMounted(() => {
 
 <style scoped>
 .grid-cols-8 {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
+  grid-template-columns: auto repeat(7, minmax(0, 1fr));
+}
+:deep(.border-gray-300) {
+  transition: all 0.3s ease;
 }
 
-:deep(.truncate) {
-  color: #333;
-  text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+:deep(.border-gray-300) {
+  border-color: #e5e7eb;
 }
 </style>
