@@ -1,6 +1,6 @@
+import csv
 import requests
 from bs4 import BeautifulSoup
-from portal_login import pku_portal_login_and_get_session
 from typing import List
 import time
 from selenium import webdriver
@@ -135,9 +135,6 @@ def fetch_course_table_html(username: str, password: str) -> str | None:
         html = driver.page_source
         print("-> 成功获取课表页面 HTML")
 
-        with open("my_course_table.html", "w", encoding="utf-8") as f:
-            f.write(html)
-
         return html
 
     except Exception as e:
@@ -186,7 +183,23 @@ def parse_course_table(html: str) -> List[List[str]]:
 
     return grid
 
+def save_course_grid_to_csv(grid: List[List[str]],
+                            filename: str = "course_table.csv") -> None:
+    """
+    把课表 grid 写入 CSV 文件。
+    grid: 12×7 的课表数据
+    filename: 输出文件名
+    """
+    # 表头：节次 + 周一~周日
+    header = ["节次", "周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
+    with open(filename, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(header)
+
+        for i, row in enumerate(grid, start=1):
+            # 每一行前面加上节次编号（1~12）
+            writer.writerow([i] + row)
 
 def sync_schedule(username: str, password: str):
 
@@ -197,6 +210,7 @@ def sync_schedule(username: str, password: str):
 
     try:
         grid = parse_course_table(html)
+        save_course_grid_to_csv(grid)  # 保存课表到 CSV 文件
         data = {"grid": grid}
         return True, data
     except Exception as e:
@@ -208,6 +222,7 @@ if __name__ == "__main__":
     test_username = "username"
     test_password = "password"
     success, data = sync_schedule(test_username, test_password)
+
     if success:
         print("课表同步成功！")
         print(data)
