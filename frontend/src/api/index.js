@@ -242,6 +242,24 @@ export async function UpdateDDL({UserId, deadlines}={}) {
   });
 }
 
+export async function UpdateLinkCategory({userId, LinkCategory}){
+  return request("/edit/linkcategory", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      userId: userId,
+      LinkCategory: LinkCategory,
+    }),
+  });
+}
+
+// 课表相关接口
+export async function getSchedule(userId) {
+  return request(`/schedule?userId=${encodeURIComponent(userId)}`, {
+    method: "GET"
+  });
+}
+
 export default {
   getUserData,
   createCourse,
@@ -255,4 +273,6 @@ export default {
   EditCourse,
   EditNote,
   UpdateDDL,
+  UpdateLinkCategory,
+  getSchedule,
 };

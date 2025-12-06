@@ -143,10 +143,120 @@ class Database:
         """
         )
 
+        # 创建链接分类表
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS link_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT NOT NULL,
+                icon TEXT NOT NULL,
+                user_id INTEGER NOT NULL,
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_link_categories_user_id ON link_categories(user_id)
+        """
+        )
+
+        # 创建链接表
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS useful_links (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                description TEXT,
+                is_trusted BOOLEAN DEFAULT FALSE,
+                category_id INTEGER NOT NULL,
+                user_id INTEGER NOT NULL,
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (category_id) REFERENCES link_categories (id) ON DELETE CASCADE,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_useful_links_user_id ON useful_links(user_id)
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_useful_links_category_id ON useful_links(category_id)
+        """
+        )
+
+        # 创建任务管理表
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tasks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,           -- 对应 deadlines 列表中的 name
+                deadline TEXT NOT NULL,       -- 截止日期时间字符串
+                message TEXT,                 -- 对应 message，允许为空
+                status TEXT DEFAULT 'pending', -- 状态: pending, completed, overdue 等
+                user_id INTEGER NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_tasks_user_id ON tasks(user_id)
+        """
+        )
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS ix_tasks_deadline ON tasks(deadline)
+        """
+        )
+
         # 初始化一个默认管理员用户（如果不存在）
         cursor.execute(
             "INSERT OR IGNORE INTO users (id, username, email, password) VALUES (1, 'admin', 'admin@example.com', 'adminpass')"
         )
+        # 创建课表表
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS course_schedules (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,               -- 课程名称
+                teacher TEXT,                     -- 教师姓名
+                location TEXT,                    -- 上课地点
+                week_type INTEGER DEFAULT 0,      -- 周次类型：0-每周，1-单周，2-双周
+                user_id INTEGER NOT NULL,         -- 用户ID
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            )
+        """)
+
+        # 创建上课时间表（多对多关系，因为一门课可能有多个上课时间）
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS course_schedule_times (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                course_schedule_id INTEGER NOT NULL,  -- 课程表ID
+                time_index INTEGER NOT NULL,          -- 时间索引（0-83，对应一周的课程时间段）
+                FOREIGN KEY (course_schedule_id) REFERENCES course_schedules (id) ON DELETE CASCADE,
+                UNIQUE(course_schedule_id, time_index)  -- 确保同一门课同一时间不重复
+            )
+        """)
+
+        # 创建索引
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS ix_course_schedules_user_id ON course_schedules(user_id)
+        """)
+
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS ix_course_schedule_times_course_id ON course_schedule_times(course_schedule_id)
+        """)
+
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS ix_course_schedule_times_time_index ON course_schedule_times(time_index)
+        """)
 
         conn.commit()
         # 注意：这里不关闭连接，因为它被线程局部存储管理了
@@ -389,3 +499,531 @@ class Database:
         except sqlite3.Error as e:
             print(f"添加笔记时发生数据库错误: {e}")
             return None
+        
+    def edit_course(self, user_id, old_title, new_title):
+        """
+        修改课程名称
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 检查新名称是否已存在
+                cursor.execute(
+                    "SELECT id FROM courses WHERE user_id = ? AND title = ?",
+                    (user_id, new_title)
+                )
+                existing = cursor.fetchone()
+                if existing:
+                    return {"error": "课程名称已存在"}
+                
+                # 更新课程名称
+                cursor.execute(
+                    "UPDATE courses SET title = ? WHERE user_id = ? AND title = ?",
+                    (new_title, user_id, old_title)
+                )
+                
+                if cursor.rowcount == 0:
+                    return {"error": "课程不存在或无权修改"}
+                
+                return {"success": True, "message": "课程名称修改成功"}
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return {"error": f"数据库错误: {e}"}
+
+    def edit_note(self, user_id, course_name, old_note_name, new_note_name):
+        """
+        修改笔记名称
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 获取课程ID
+                cursor.execute(
+                    "SELECT id FROM courses WHERE user_id = ? AND title = ?",
+                    (user_id, course_name)
+                )
+                course = cursor.fetchone()
+                if not course:
+                    return {"error": "课程不存在"}
+                
+                course_id = course["id"] if isinstance(course, sqlite3.Row) else course[0]
+                
+                # 检查新名称是否已存在
+                cursor.execute(
+                    "SELECT id FROM notes WHERE user_id = ? AND course_id = ? AND name = ?",
+                    (user_id, course_id, new_note_name)
+                )
+                existing = cursor.fetchone()
+                if existing:
+                    return {"error": "笔记名称已存在"}
+                
+                # 更新笔记名称
+                cursor.execute(
+                    "UPDATE notes SET name = ? WHERE user_id = ? AND course_id = ? AND name = ?",
+                    (new_note_name, user_id, course_id, old_note_name)
+                )
+                
+                if cursor.rowcount == 0:
+                    return {"error": "笔记不存在或无权修改"}
+                
+                return {"success": True, "message": "笔记名称修改成功"}
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return {"error": f"数据库错误: {e}"}
+
+    # 常用链接相关方法
+    def add_link_category(self, user_id, category, icon, sort_order=0):
+        """
+        添加链接分类
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "INSERT INTO link_categories (category, icon, user_id, sort_order) VALUES (?, ?, ?, ?)",
+                    (category, icon, user_id, sort_order)
+                )
+                category_id = cursor.lastrowid
+                
+                cursor.execute("SELECT * FROM link_categories WHERE id = ?", (category_id,))
+                new_category = cursor.fetchone()
+                return dict(new_category) if new_category else None
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return None
+
+    def get_link_categories(self, user_id):
+        """
+        获取用户的所有链接分类
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT * FROM link_categories WHERE user_id = ? ORDER BY sort_order, created_at",
+                (user_id,)
+            )
+            categories = cursor.fetchall()
+            return [dict(cat) for cat in categories]
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return []
+
+    def add_useful_link(self, user_id, category_id, name, url, description="", is_trusted=False, sort_order=0):
+        """
+        添加常用链接
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "INSERT INTO useful_links (name, url, description, is_trusted, category_id, user_id, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (name, url, description, is_trusted, category_id, user_id, sort_order)
+                )
+                link_id = cursor.lastrowid
+                
+                cursor.execute("SELECT * FROM useful_links WHERE id = ?", (link_id,))
+                new_link = cursor.fetchone()
+                return dict(new_link) if new_link else None
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return None
+
+    def get_useful_links_by_category(self, user_id):
+        """
+        获取用户的所有链接，按分类组织
+        返回格式符合 LinkCategory 结构
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            # 获取所有分类
+            categories = self.get_link_categories(user_id)
+            
+            result = []
+            for category in categories:
+                cursor.execute(
+                    "SELECT * FROM useful_links WHERE user_id = ? AND category_id = ? ORDER BY sort_order, created_at",
+                    (user_id, category['id'])
+                )
+                links = cursor.fetchall()
+                
+                link_list = []
+                for link in links:
+                    link_dict = dict(link)
+                    link_list.append({
+                        "name": link_dict['name'],
+                        "url": link_dict['url'],
+                        "desc": link_dict['description'] or "",
+                        "isTrusted": bool(link_dict['is_trusted'])
+                    })
+                
+                result.append({
+                    "category": category['category'],
+                    "icon": category['icon'],
+                    "links": link_list
+                })
+            
+            return result
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return []
+
+    def delete_link_category(self, user_id, category_id):
+        """
+        删除链接分类（会级联删除该分类下的所有链接）
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "DELETE FROM link_categories WHERE id = ? AND user_id = ?",
+                    (category_id, user_id)
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    def delete_useful_link(self, user_id, link_id):
+        """
+        删除常用链接
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "DELETE FROM useful_links WHERE id = ? AND user_id = ?",
+                    (link_id, user_id)
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    # 任务管理相关方法
+    def add_task(self, user_id, name, deadline, message="", status="pending"):
+        """
+        添加任务
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "INSERT INTO tasks (name, deadline, message, status, user_id) VALUES (?, ?, ?, ?, ?)",
+                    (name, deadline, message, status, user_id)
+                )
+                task_id = cursor.lastrowid
+                
+                cursor.execute("SELECT * FROM tasks WHERE id = ?", (task_id,))
+                new_task = cursor.fetchone()
+                return dict(new_task) if new_task else None
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return None
+
+    def get_tasks(self, user_id):
+        """
+        获取用户的任务列表，返回格式与 deadlines 数据结构一致
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute(
+                "SELECT * FROM tasks WHERE user_id = ? ORDER BY deadline ASC",
+                (user_id,)
+            )
+            tasks = cursor.fetchall()
+            # 转换为 deadlines 数据结构
+            deadlines = []
+            for task in tasks:
+                task_dict = dict(task)
+                deadlines.append({
+                    "name": task_dict['name'],
+                    "deadline": task_dict['deadline'],
+                    "message": task_dict['message'] or "",
+                    "status": task_dict['status']
+                })
+            return deadlines
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return []
+
+    def update_task(self, user_id, task_id, **updates):
+        """
+        更新任务信息
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 构建动态更新语句
+                set_clause = ", ".join([f"{key} = ?" for key in updates.keys()])
+                values = list(updates.values())
+                values.extend([task_id, user_id])
+                
+                cursor.execute(
+                    f"UPDATE tasks SET {set_clause} WHERE id = ? AND user_id = ?",
+                    values
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    def delete_task(self, user_id, task_id):
+        """
+        删除任务
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                cursor.execute(
+                    "DELETE FROM tasks WHERE id = ? AND user_id = ?",
+                    (task_id, user_id)
+                )
+                return cursor.rowcount > 0
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+    def update_deadlines(self, user_id, deadlines):
+        """
+        批量更新用户的DDL列表
+        deadlines: 任务对象列表，格式为 [{"name": "...", "deadline": "...", "message": "...", "status": "..."}, ...]
+        """
+        conn = self.get_db_connection()
+        cursor = conn.cursor()
+        try:
+            with conn:
+                # 先删除用户的所有现有任务
+                cursor.execute("DELETE FROM tasks WHERE user_id = ?", (user_id,))
+                
+                # 批量插入新任务
+                for task in deadlines:
+                    cursor.execute(
+                        "INSERT INTO tasks (name, deadline, message, status, user_id) VALUES (?, ?, ?, ?, ?)",
+                        (
+                            task.get('name', ''),
+                            task.get('deadline', ''),
+                            task.get('message', ''),
+                            task.get('status', 'pending'),
+                            user_id
+                        )
+                    )
+                
+                return True
+        except sqlite3.Error as e:
+            print(f"数据库错误: {e}")
+            return False
+
+
+        def add_course_schedule(self, user_id, name, teacher, location, week_type, times):
+            """
+            添加课程表
+            times: 时间索引列表 [14, 15, 40, 41] 等
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    # 插入课程表基本信息
+                    cursor.execute(
+                        "INSERT INTO course_schedules (name, teacher, location, week_type, user_id) VALUES (?, ?, ?, ?, ?)",
+                        (name, teacher, location, week_type, user_id)
+                    )
+                    schedule_id = cursor.lastrowid
+                    
+                    # 插入上课时间
+                    for time_index in times:
+                        cursor.execute(
+                            "INSERT INTO course_schedule_times (course_schedule_id, time_index) VALUES (?, ?)",
+                            (schedule_id, time_index)
+                        )
+                    
+                    # 查询并返回完整的课程表信息
+                    return self._get_course_schedule_by_id(schedule_id)
+            except sqlite3.Error as e:
+                print(f"添加课程表时发生数据库错误: {e}")
+                return None
+
+        def get_course_schedules(self, user_id):
+            """
+            获取用户的所有课程表
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                # 获取所有课程表基本信息
+                cursor.execute(
+                    "SELECT * FROM course_schedules WHERE user_id = ? ORDER BY name",
+                    (user_id,)
+                )
+                schedules = cursor.fetchall()
+                
+                result = []
+                for schedule in schedules:
+                    schedule_dict = dict(schedule)
+                    # 获取该课程的上课时间
+                    cursor.execute(
+                        "SELECT time_index FROM course_schedule_times WHERE course_schedule_id = ? ORDER BY time_index",
+                        (schedule_dict['id'],)
+                    )
+                    times = [row['time_index'] for row in cursor.fetchall()]
+                    
+                    # 组装成与前端 Course 类一致的结构
+                    result.append({
+                        "id": schedule_dict['id'],
+                        "name": schedule_dict['name'],
+                        "teacher": schedule_dict['teacher'] or "",
+                        "location": schedule_dict['location'] or "",
+                        "weekType": schedule_dict['week_type'],
+                        "times": times
+                    })
+                
+                return result
+            except sqlite3.Error as e:
+                print(f"获取课程表时发生数据库错误: {e}")
+                return []
+
+        def update_course_schedule(self, user_id, schedule_id, **updates):
+            """
+            更新课程表信息
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    # 允许更新的字段
+                    allowed_fields = ['name', 'teacher', 'location', 'week_type']
+                    update_fields = {}
+                    
+                    for field in allowed_fields:
+                        if field in updates:
+                            update_fields[field] = updates[field]
+                    
+                    # 如果有基本信息需要更新
+                    if update_fields:
+                        set_clause = ", ".join([f"{key} = ?" for key in update_fields.keys()])
+                        values = list(update_fields.values())
+                        values.extend([schedule_id, user_id])
+                        
+                        cursor.execute(
+                            f"UPDATE course_schedules SET {set_clause} WHERE id = ? AND user_id = ?",
+                            values
+                        )
+                    
+                    # 如果需要更新上课时间
+                    if 'times' in updates:
+                        # 先删除原有时间
+                        cursor.execute(
+                            "DELETE FROM course_schedule_times WHERE course_schedule_id = ?",
+                            (schedule_id,)
+                        )
+                        
+                        # 插入新的时间
+                        for time_index in updates['times']:
+                            cursor.execute(
+                                "INSERT INTO course_schedule_times (course_schedule_id, time_index) VALUES (?, ?)",
+                                (schedule_id, time_index)
+                            )
+                    
+                    return True
+            except sqlite3.Error as e:
+                print(f"更新课程表时发生数据库错误: {e}")
+                return False
+
+        def delete_course_schedule(self, user_id, schedule_id):
+            """
+            删除课程表（会级联删除上课时间）
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    cursor.execute(
+                        "DELETE FROM course_schedules WHERE id = ? AND user_id = ?",
+                        (schedule_id, user_id)
+                    )
+                    return cursor.rowcount > 0
+            except sqlite3.Error as e:
+                print(f"删除课程表时发生数据库错误: {e}")
+                return False
+
+        def update_course_table(self, user_id, course_table):
+            """
+            批量更新用户的课表
+            course_table: 课程对象列表，格式与前端 CourseTable 一致
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            try:
+                with conn:
+                    # 先删除用户的所有现有课表（会级联删除上课时间）
+                    cursor.execute("DELETE FROM course_schedules WHERE user_id = ?", (user_id,))
+                    
+                    # 批量插入新课表
+                    for course in course_table:
+                        cursor.execute(
+                            "INSERT INTO course_schedules (name, teacher, location, week_type, user_id) VALUES (?, ?, ?, ?, ?)",
+                            (
+                                course.get('name', ''),
+                                course.get('teacher', ''),
+                                course.get('location', ''),
+                                course.get('weekType', 0),
+                                user_id
+                            )
+                        )
+                        schedule_id = cursor.lastrowid
+                        
+                        # 插入上课时间
+                        for time_index in course.get('times', []):
+                            cursor.execute(
+                                "INSERT INTO course_schedule_times (course_schedule_id, time_index) VALUES (?, ?)",
+                                (schedule_id, time_index)
+                            )
+                    
+                    return True
+            except sqlite3.Error as e:
+                print(f"更新课表时发生数据库错误: {e}")
+                return False
+
+        def _get_course_schedule_by_id(self, schedule_id):
+            """
+            根据ID获取课程表信息（内部方法）
+            """
+            conn = self.get_db_connection()
+            cursor = conn.cursor()
+            
+            # 获取课程表基本信息
+            cursor.execute("SELECT * FROM course_schedules WHERE id = ?", (schedule_id,))
+            schedule = cursor.fetchone()
+            
+            if not schedule:
+                return None
+            
+            schedule_dict = dict(schedule)
+            
+            # 获取上课时间
+            cursor.execute(
+                "SELECT time_index FROM course_schedule_times WHERE course_schedule_id = ? ORDER BY time_index",
+                (schedule_id,)
+            )
+            times = [row['time_index'] for row in cursor.fetchall()]
+            
+            return {
+                "id": schedule_dict['id'],
+                "name": schedule_dict['name'],
+                "teacher": schedule_dict['teacher'] or "",
+                "location": schedule_dict['location'] or "",
+                "weekType": schedule_dict['week_type'],
+                "times": times
+            }

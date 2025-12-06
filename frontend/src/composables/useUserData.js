@@ -20,7 +20,7 @@ class MyCourse {
 class UserData {
   // accept an options object so we can keep backward compatibility and also
   // assign any extra properties that backend may return (e.g. avatar, bio, role)
-  constructor({ courses = [], username = "", userId = null, email = "", deadlines = [] } = {}) {
+  constructor({ courses = [], username = "", userId = null, email = "", deadlines = [], LinkCategorys = [], courseTable = []} = {}) {
     this.username = username;
     this.userId = userId;
     this.email = email;
@@ -33,8 +33,49 @@ class UserData {
         d?.status ?? "",
       ),
     );
+    this.courseTable = new CourseTable(courseTable);
+
+    this.LinkCategorys = LinkCategorys.map((lc) =>
+      new LinkCategory(
+        lc?.category ?? "",
+        lc?.icon ?? "",
+        (lc?.links ?? []).map(
+          (l) =>
+            new Links(
+              l?.name ?? "",
+              l?.url ?? "",
+              l?.desc ?? "",
+              l?.isTrusted ?? false,
+            ),
+        ),
+      ),
+    );
+  }
+
+  updateCourseTable(courses) {
+    this.courseTable = new CourseTable(courses);
   }
 }
+
+// For LinksPage
+class LinkCategory{
+  // category, icon, array of links
+  constructor(category="", icon="", links=[]){
+    this.category=category;
+    this.icon=icon;
+    this.links=links;
+  }
+}
+class Link{
+  constructor(name="",url="", desc="", isTrusted=false){
+    this.name=name;
+    this.url=url;
+    this.desc=desc;
+    this.isTrusted=isTrusted;
+  }
+}
+
+
 
 class DDL{
   constructor(name="",deadline="",message="", status=""){
@@ -44,6 +85,81 @@ class DDL{
     this.status=status;
   }
 }
+
+// For CoursePage
+class Course {
+  constructor({
+    id = '',
+    name = '',
+    teacher = '',
+    location = '',
+    weekType = 0,
+    times = []
+  } = {}) {
+    this.id = id; // 课程唯一标识
+    this.name = name;
+    this.teacher = teacher;
+    this.location = location; // 上课地点
+    this.weekType = weekType; // 周次类型，0-每周，1-单周，2-双周
+    this.times = times; // 上课时间数组, 元素为整型，表示其是这周的第几节课
+    this.timeIndexes = new Set(this.times); // 用于检测时间冲突
+  }
+}
+
+class CourseTable {
+  constructor(courses = []) {
+    this.CourseTableMap = new Map();
+    this.allCourses = [];
+    this.addCourses(courses);
+  }
+
+  addCourses(courses) {
+    const courseList = Array.isArray(courses) ? courses : [courses];
+    courseList.forEach(courseData => {
+      const course = new Course(courseData);
+      this.allCourses.push(course);
+      course.times.forEach(time => {
+        this.CourseTableMap.set(time, course);
+      });
+    });
+  }
+
+  addCourse(courseData) {
+    this.addCourses(courseData);
+  }
+
+  removeCourseById(courseId) {
+    this.allCourses = this.allCourses.filter(c => c.id !== courseId);
+    this.CourseTableMap = new Map();
+    this.allCourses.forEach(course => {
+      course.times.forEach(time => {
+        this.CourseTableMap.set(time, course);
+      });
+    });
+  }
+
+  getCourseByIndex(index) {
+    if (!Number.isInteger(index) || index < 0 || index > 83) return null;
+    return this.CourseTableMap.get(index) || null;
+  }
+
+  getCoursesByWeekday(targetWeekday) {
+    if (![1, 2, 3, 4, 5, 6, 7].includes(targetWeekday)) return [];
+    
+    const dayCourses = [];
+    const startIndex = (targetWeekday - 1) * 12;
+    const endIndex = targetWeekday * 12 - 1;
+
+    for (let index = startIndex; index <= endIndex; index++) {
+      const course = this.getCourseByIndex(index);
+      if (course) {
+        dayCourses.push({ ...course, period: (index % 12) + 1, index });
+      }
+    }
+    return dayCourses;
+  }
+}
+
 
 const userData = reactive(new UserData());
 
@@ -66,6 +182,8 @@ function mapToUserData(payload) {
         ),
       ),
   );
+
+  
 
   const deadlines = (body?.deadlines ?? []).map((d) =>
     new DDL(
@@ -103,6 +221,21 @@ function ensureUserData(payload) {
   return mapToUserData(payload);
 }
 
+export function addCourse(courseData) {
+  const current = userData.courseTable?.allCourses ?? [];
+  // 确保传入是对象，避免引用被直接修改
+  const merged = current.concat([courseData]);
+  userData.courseTable = new CourseTable(merged);
+  return userData.courseTable;
+}
+
+export function removeCourse(courseId) {
+  const current = userData.courseTable?.allCourses ?? [];
+  const filtered = current.filter(c => c.id !== courseId);
+  userData.courseTable = new CourseTable(filtered);
+  return userData.courseTable;
+}
+
 async function loadUserData(userId, setNotification) {
   // clear
   userData.courses.splice(0, userData.courses.length);
@@ -129,8 +262,38 @@ async function loadUserData(userId, setNotification) {
   }
 }
 
+// 模拟数据
+export function generateMockSchedule() {
+  return [
+    {
+      id: 1,
+      name: '软件工程',
+      teacher: '孙老师',
+      location: '二教406',
+      weekType: 0,
+      times: [14, 15, 40, 41]
+    },
+    {
+      id: 2,
+      name: '高等数学B',
+      teacher: '李老师',
+      location: '二教202',
+      weekType: 1,
+      times: [24, 25, 38, 39]
+    },
+    {
+      id: 3,
+      name: '线性代数',
+      teacher: '王老师',
+      location: '理教301',
+      weekType: 2,
+      times: [12, 13, 60, 61]
+    }
+  ];
+}
+
 export function useUserData() {
-  return { userData, loadUserData, mapToUserData };
+  return { userData, loadUserData, mapToUserData, addCourse, removeCourse };
 }
 
 export default useUserData;

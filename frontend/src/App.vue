@@ -25,6 +25,8 @@ const fileview = ref(false);
 const filepath = ref("");
 const showCloudModal = ref(false);
 const showDdlDetailModal = ref(false);
+// 新增：课表相关状态
+const showScheduleModal = ref(false);
 
 const DdlIdx = ref(-1);
 
@@ -48,6 +50,7 @@ const closeShadowHandler = () => {
   showNewCourseModal.value = false;
   showNewNoteModal.value = false;
   showDdlDetailModal.value = false;
+  showScheduleModal.value = false;
 };
 
 const dataSelector = () => {
@@ -119,6 +122,7 @@ async function handleRegister(registerData) {
 function handleLogout() {
   logout();
   userData.courses.splice(0, userData.courses.length);
+  userData.updateCourseTable([]); // 登出时清空课表
   setNotification("已退出登录", "欢迎再次使用", true);
 }
 
@@ -161,7 +165,7 @@ function CloseFileView() {
           @done="
             () => {
               // 同步数据后从后端重新加载用户数据以保持一致
-              loadUserData(currentUser?.id);
+              // loadUserData(currentUser?.id);
             }
           "
         ></component>

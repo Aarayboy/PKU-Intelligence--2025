@@ -42,6 +42,16 @@ def add_note(
     """Insert a note row. Returns new note id."""
     db.add_note(name, course_id, [], [file] if file else [], user_id)
 
+def add_ddl(
+    db: Database, user_id: int
+) -> int:
+    """Insert a deadline row. Returns new deadline id."""
+    sample_deadlines = [
+        {"name": "高等数学期中考试", "deadline": "2024-10-15 23:12", "message": "考试提醒", "status": 0},
+        {"name": "数据结构作业1", "deadline": "2024-09-30 23:12", "message": "balabala", "status": 1},
+    ]
+    db.update_deadlines(user_id, sample_deadlines)
+
 
 def seed():
     db = Database()
