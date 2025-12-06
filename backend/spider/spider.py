@@ -1,12 +1,8 @@
 import os
 import re
-<<<<<<< HEAD
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from spider import login
-=======
-import time
->>>>>>> 2ae7a216e2d50b653a54d5d99148d85f564484c9
 from pathlib import Path
 from urllib.parse import urljoin, urlparse
 

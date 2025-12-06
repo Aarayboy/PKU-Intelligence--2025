@@ -1,7 +1,6 @@
 from flask import Flask, jsonify, request
 import sync_schedule
 import login
-from flask import Flask, jsonify
 import spider  # 导入爬虫模块
 
 app = Flask(__name__)
@@ -54,7 +53,7 @@ def test_download_handouts():
     course_id = 9
 
     print(f"当前session为:{ _session}")
-
+'''
 @app.route("/sync", methods=["POST"])
 def sync_route():
     payload = request.get_json()
@@ -67,7 +66,12 @@ def sync_route():
 
     # 这里你可以只返回 grid，也可以两个都返回
     return jsonify(success=True, schedule=data["grid"], course_list=data["course_list"])
-
+'''
+'''
+@app.route('/')
+def home():
+    return 'Welcome to my site!'
+'''
 if __name__ == '__main__':
     # 运行 Flask app
     # debug=True 模式会在修改代码后自动重启服务器

@@ -2,131 +2,217 @@ import requests
 from bs4 import BeautifulSoup
 from portal_login import pku_portal_login_and_get_session
 from typing import List
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from requests import Session
+
+# “我的课表”页面 URL（目前主要作为参考，不强依赖 URL 变化）
 MY_COURSE_TABLE_URL = "https://portal.pku.edu.cn/publicQuery/#/myCourseTable"
-# 登录并获取课程表的函数
+
+# 统一身份认证 OAuth URL（一定要和 portal_login 里的一致）
+PKU_OAUTH_URL = (
+    "https://iaaa.pku.edu.cn/iaaa/oauth.jsp"
+    "?appID=portal2017"
+    "&appName=%E5%8C%97%E4%BA%AC%E5%A4%A7%E5%AD%A6%E6%A0%A1%E5%86%85%E4%BF%A1%E6%81%AF%E9%97%A8%E6%88%B7%E6%96%B0%E7%89%88"
+    "&redirectUrl=https%3A%2F%2Fportal.pku.edu.cn%2Fportal2017%2FssoLogin.do"
+)
+
+# 初始化全局 driver（你之前就是这么做的）
+options = Options()
+options.add_argument("--no-sandbox")
+options.add_argument("--disable-dev-shm-usage")
+options.add_argument("--disable-gpu")
+options.add_argument("log-level=3")
+driver = webdriver.Chrome(options=options)
+
+
+def debug_current_page(driver: webdriver.Chrome):
+    url = driver.current_url
+    title = driver.title
+    html = driver.page_source
+
+    print(f"当前 URL： {url}")
+    print(f"页面 Title： {title}")
+    print("页面 HTML 预览（前 500 字符）：")
+    print(html[:500])
+
+    has_all = "全部" in html
+    print(("\n✅" if has_all else "\n❌"),
+          f"页面 HTML 中【{'包含' if has_all else '不包含'}】“全部”二字")
+    print("页面中 iframe 数量：", len(driver.find_elements(By.TAG_NAME, "iframe")))
+    print("========== 页面状态诊断结束 ==========\n")
+
 
 def fetch_course_table_html(username: str, password: str) -> str | None:
     """
-    登陆门户后，访问“我的课表”页面，返回 HTML 文本。
+    使用 Selenium 完整模拟：
+    IAAA 登录 → portal2017 → 全部 → 我的课表 → 抓取课表 HTML
     """
-    session = pku_portal_login_and_get_session(username, password)
-    if session is None:
-        print("登录失败，无法获取课表。")
+
+    options = Options()
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("log-level=3")
+    # ⚠️ 不要 headless
+    # options.add_argument("--headless")
+
+    driver = webdriver.Chrome(options=options)
+
+    try:
+        # ========== 1. 打开 IAAA OAuth ==========
+        print("-> 打开 IAAA OAuth 页面 ...")
+        oauth_url = (
+            "https://iaaa.pku.edu.cn/iaaa/oauth.jsp"
+            "?appID=portal2017"
+            "&appName=%E5%8C%97%E4%BA%AC%E5%A4%A7%E5%AD%A6%E6%A0%A1%E5%86%85%E4%BF%A1%E6%81%AF%E9%97%A8%E6%88%B7%E6%96%B0%E7%89%88"
+            "&redirectUrl=https%3A%2F%2Fportal.pku.edu.cn%2Fportal2017%2FssoLogin.do"
+        )
+        driver.get(oauth_url)
+
+        WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.ID, "user_name"))
+        )
+
+        # ========== 2. 输入账号密码 ==========
+        print("-> 输入账号密码 ...")
+        driver.find_element(By.ID, "user_name").send_keys(username)
+        driver.find_element(By.ID, "password").send_keys(password)
+        driver.find_element(By.ID, "logon_button").click()
+
+        # ========== 3. 等待跳转 portal ==========
+        print("-> 等待跳转到 portal2017 ...")
+        WebDriverWait(driver, 30).until(
+            EC.url_contains("portal.pku.edu.cn/portal2017")
+        )
+
+        # 确保在 bizCenter
+        driver.get("https://portal.pku.edu.cn/portal2017/#/bizCenter")
+        WebDriverWait(driver, 30).until(
+            EC.url_contains("#/bizCenter")
+        )
+        print("-> 已进入 bizCenter")
+
+        time.sleep(3)
+
+        # ========== 4. 点击“全部” ==========
+        print("-> 点击 '全部' 图标 ...")
+        all_icon = WebDriverWait(driver, 30).until(
+            EC.element_to_be_clickable((By.ID, "all"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", all_icon)
+        time.sleep(1)
+        all_icon.click()
+
+        time.sleep(3)
+
+        # ========== 5. 点击“我的课表” ==========
+        print("-> 点击 '我的课表' 图标 ...")
+        old_windows = driver.window_handles
+
+        course_icon = WebDriverWait(driver, 30).until(
+            EC.element_to_be_clickable((By.ID, "tag_s_coursetable"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", course_icon)
+        time.sleep(1)
+        course_icon.click()
+
+        # ========== 6. 切换到新窗口 ==========
+        WebDriverWait(driver, 30).until(
+            lambda d: len(d.window_handles) > len(old_windows)
+        )
+        new_window = [w for w in driver.window_handles if w not in old_windows][0]
+        driver.switch_to.window(new_window)
+
+        print("-> 已切换到课表窗口")
+        time.sleep(5)  # ⚠️ 给 Angular 足够时间渲染
+
+        # ========== 7. 获取 HTML ==========
+        html = driver.page_source
+        print("-> 成功获取课表页面 HTML")
+
+        with open("my_course_table.html", "w", encoding="utf-8") as f:
+            f.write(html)
+
+        return html
+
+    except Exception as e:
+        print("❌ 课表抓取失败：", e)
         return None
 
-    # 注意：# 后面的 fragment 前端用来路由，HTTP 请求时不会带这一段，
-    # 但直接写完整 URL 也没关系，requests 会自动去掉。
-    resp = session.get(MY_COURSE_TABLE_URL)
-    if resp.status_code != 200:
-        print(f"获取课表页面失败，状态码: {resp.status_code}")
-        return None
-
-    return resp.text
+    finally:
+        # 用完再关，方便你调试时观察页面
+        # driver.quit()
+        pass
 
 def parse_course_table(html: str) -> List[List[str]]:
-    """
-    解析“我的课表”页面 HTML，返回一个二维数组 grid[row][col]，
-    row 表示第几节课（从 0 开始），col 表示星期（0=周一, 1=周二,...）
-
-    若某格无课则为空字符串 ""。
-    """
     soup = BeautifulSoup(html, "html.parser")
 
-    target_table = None
+    # 12节 × 7天
+    grid = [["" for _ in range(7)] for _ in range(12)]
 
-    # 1. 找到真正放课表的 table：
-    #    策略：寻找包含“上课信息”字样的 table
-    for table in soup.find_all("table"):
-        if "上课信息" in table.get_text():
-            target_table = table
-            break
+    day_map = {
+        "mon": 0,
+        "tue": 1,
+        "wed": 2,
+        "thu": 3,
+        "fri": 4,
+        "sat": 5,
+        "sun": 6,
+    }
 
-    if target_table is None:
-        raise ValueError("未找到包含课表的 <table>，请检查页面结构或调整解析逻辑。")
+    # ✅ 直接找所有课表格子
+    for td in soup.find_all("td", class_="td-compact"):
+        td_id = td.get("id")
+        if not td_id:
+            continue
 
-    # 2. 行：每个 <tr> 一行，通常第一行是表头（周一~周日），先判断
-    rows = target_table.find_all("tr")
-    if not rows:
-        return []
+        # 例如：tue3 / mon10
+        for day in day_map:
+            if td_id.startswith(day):
+                try:
+                    row = int(td_id[len(day):]) - 1
+                    col = day_map[day]
+                except ValueError:
+                    continue
 
-    # 可能第一行是表头：含有 <th> 或“周一/周二”等字样，就跳过
-    header_like = False
-    head_text = rows[0].get_text()
-    if "周一" in head_text or rows[0].find("th") is not None:
-        header_like = True
-
-    body_rows = rows[1:] if header_like else rows
-
-    grid: List[List[str]] = []
-
-    for r_idx, tr in enumerate(body_rows):
-        cols = tr.find_all("td")
-        row_data: List[str] = []
-
-        for c_idx, td in enumerate(cols):
-            # 一个单元格内可能多个课程，用 span 块分开，全部抓出
-            spans = td.find_all("span")
-            cell_blocks: List[str] = []
-
-            if spans:
-                for sp in spans:
-                    # 把 <br> 用换行拼起来
-                    text = sp.get_text(separator="\n", strip=True)
-                    if text:
-                        cell_blocks.append(text)
-            else:
-                # 退而求其次，直接取 td 文本
-                text = td.get_text(separator="\n", strip=True)
+                text = td.get_text("\n", strip=True)
                 if text:
-                    cell_blocks.append(text)
-
-            # 最终单元格文本：同一格多个课程，用空行分隔
-            cell_text = "\n\n".join(cell_blocks)
-            row_data.append(cell_text)
-
-        grid.append(row_data)
+                    grid[row][col] = text
 
     return grid
 
-def grid_to_course_list(grid: List[List[str]]):
-    """
-    将二维网格转为 [{row, col, text}, ...]，
-    只保留非空的课程格子，方便前端使用。
-    row/col 均从 1 开始计数。
-    """
-    result = []
-    for r_idx, row in enumerate(grid, start=1):
-        for c_idx, cell_text in enumerate(row, start=1):
-            if cell_text.strip():
-                result.append({
-                    "row": r_idx,
-                    "col": c_idx,
-                    "text": cell_text
-                })
-    return result
+
 
 def sync_schedule(username: str, password: str):
-    """
-    总入口函数：
-    1. 登录门户
-    2. 抓取“我的课表”页面 HTML
-    3. 解析为 grid 和带坐标的列表
 
-    返回：
-        success: bool
-        data:    dict | str  (成功时是课程数据，失败时是错误信息)
-    """
+
     html = fetch_course_table_html(username, password)
     if html is None:
         return False, "登录或获取课表页面失败"
 
     try:
         grid = parse_course_table(html)
-        course_list = grid_to_course_list(grid)
-        data = {
-            "grid": grid,             # grid[row][col] 形式
-            "course_list": course_list  # [{row, col, text}, ...]
-        }
+        data = {"grid": grid}
         return True, data
     except Exception as e:
         return False, f"解析课表失败: {e}"
+
+
+if __name__ == "__main__":
+    # 测试用例
+    test_username = "username"
+    test_password = "password"
+    success, data = sync_schedule(test_username, test_password)
+    if success:
+        print("课表同步成功！")
+        print(data)
+    else:
+        print("课表同步失败：", data)
+
+
+

@@ -6,6 +6,8 @@ from flask import Flask, jsonify, request, send_from_directory, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 
+from spider.sync_schedule import sync_schedule
+
 import spider.login as login
 import spider.spider as spider
 from database import storage
@@ -481,6 +483,18 @@ def updateDeadline():
     # 如果成功更新，示例返回 
     return jsonify({"success": True, "message": "Deadlines updated"}), 200
 
+@app.route("/sync", methods=["POST"])
+def sync_route():
+    payload = request.get_json()
+    username = payload.get("username")
+    password = payload.get("password")
+
+    ok, data = sync_schedule(username, password)
+    if not ok:
+        return jsonify(success=False, message=data)
+
+    # 这里你可以只返回 grid，也可以两个都返回
+    return jsonify(success=True, schedule=data["grid"], course_list=data["course_list"])
 
 if __name__ == "__main__":
     # Run on port 4000
