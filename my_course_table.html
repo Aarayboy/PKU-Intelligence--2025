@@ -1,0 +1,125 @@
+<HTML><head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0">
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge;chrome=1">
+<link rel="apple-touch-icon" href="/pku_logo_c.png">
+<link rel="stylesheet" type="text/css" href="./resources/css/login.css?_v=20250106">
+<link href="./resources/css/font-awesome.min.css" rel="stylesheet" type="text/css">
+<style>
+    body{-webkit-text-size-adjust:100% !important;}
+</style>
+<script>
+  (function() {
+    if (typeof WeixinJSBridge == "object" && typeof WeixinJSBridge.invoke == "function") {
+        handleFontSize();
+    } else {
+        if (document.addEventListener) {
+            document.addEventListener("WeixinJSBridgeReady", handleFontSize, false);
+        } else if (document.attachEvent) {
+            document.attachEvent("WeixinJSBridgeReady", handleFontSize);
+            document.attachEvent("onWeixinJSBridgeReady", handleFontSize);
+        }
+    }
+    function handleFontSize() {
+        WeixinJSBridge.invoke('setFontSizeCallback', { 'fontSize' : 0 });
+        WeixinJSBridge.on('menu:setfont', function() {
+            WeixinJSBridge.invoke('setFontSizeCallback', { 'fontSize' : 0 });
+        });
+    }
+    })();
+</script>
+<!--<script type="text/javascript" src="./resources/javascript/jquery-1.10.2.min.js"></script>-->
+<script type="text/javascript" src="./resources/javascript/jquery-3.7.0.min.js"></script>
+<script type="text/javascript" src="./resources/javascript/jquery-migrate-3.4.0.min.js"></script>
+<!--<script type="text/javascript" src="./resources/javascript/OAuthLogin.js?_v=20201211"></script>-->
+<script type="text/javascript">
+	document.write('<script src="./resources/javascript/OAuthLogin.js?_v='+Math.random()+'"  type="text/javascript"><\/script>');
+</script><script src="./resources/javascript/OAuthLogin.js?_v=0.1264346504995434" type="text/javascript"></script>
+<script type="text/javascript" src="./resources/javascript/OAuthRefresh.js"></script>
+<script type="text/javascript">
+	redirectURL = "https://portal.pku.edu.cn/portal2017/ssoLogin.do";
+	redirectLogonURL = "null";	
+</script>
+<title>北京大学统一身份认证</title>
+</head>
+<body onload="focusName()">
+   <div class="main">
+      <div class="top"><a href="http://www.pku.edu.cn"><img src="./resources/images/pku_logo_red.png"></a></div>
+      <div class="mid" style="background-image: url(&quot;./resources/images/pku_view_11.jpg&quot;);">
+	      <!-- <div id="left" onclick="changeViewImg()"></div> -->
+	      <form method="post" onsubmit="return false;">
+	      <div class="single_col_panel">
+	      	 <div class="row">
+	            <div class="row_50 center row-title"><a href="javascript:void(0);" onclick="switch2LoginPanel()" id="login_panel_top_bar" class="current">账号登录</a></div>
+	            <div class="row_50 center row-title"><a href="javascript:void(0);" onclick="switch2QRPanel()" id="qrcode_panel_top_bar">扫码登录</a></div>
+	         </div>
+	      	<div id="login_panel">
+	             <div class="row">
+		            <input class="input-txt-row" type="text" tabindex="1" id="user_name" name="userName" placeholder="学号/职工号/手机号" onkeydown="enterPassword(event)" onchange="showOrHideSmsCode()">
+		         	<a href="javascript:void(0)" class="i-clear" onclick="resetInput(event)" style="display: inline;"><i class="fa fa-times-circle"></i></a>
+		         </div>
+	            <div id="passwd_area" class="row">
+	            	<!-- 原来采用text和password切换的方式，但无法实现自动填写密码 -->
+		        	<input class="input-txt-row input-txt-pad" type="password" tabindex="2" id="password" name="password" placeholder="密码" onfocus="focusPassword()" onblur="leavePassword()" onkeydown="enterSMSCode(event)">
+		            <a href="javascript:void(0)" class="i-clear i-clear-pad" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		            <a href="/iaaa/resources/help/findPwd.html" target="_blank" class="pad-tip">忘记密码</a>
+		         </div>
+		         <div id="sms_area" class="row" style="display:none;">
+		            <input class="input-txt-half-row" type="number" pattern="[0-9]*" tabindex="3" id="sms_code" name="sms_code" placeholder="短信验证码" onfocus="focusSMSCode()" onblur="leaveSMSCode()" onkeydown="enterCode(event)">
+		            <a href="javascript:void(0)" class="i-clear i-clear-half" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		            <input class="input-btn-half-row" type="button" id="sms_button" onclick="sendSMSCode()" value="获取短信验证码">
+		         </div>
+		         <div id="otp_area" class="row" style="display:none;">
+		        	  <input class="input-txt-row input-txt-pad" type="number" pattern="[0-9]*" tabindex="4" id="otp_code" name="otp_code" placeholder="手机令牌" onfocus="focusOTPCode()" onblur="leaveOTPCode()" onkeydown="enterCode(event)">
+		              <a href="javascript:void(0)" class="i-clear i-clear-pad" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		              <a href="/iaaa/resources/help/otpHelp.html" target="_blank" class="pad-tip">使用说明</a>
+		         </div>
+		         <div id="code_area" class="row" style="display:none;">
+		            <div class="row_66">
+		            	<input class="input-txt-row input-txt-pad2" type="text" tabindex="5" id="valid_code" name="validCode" placeholder="验证码" onfocus="focusCode()" onblur="leaveCode()" onkeydown="enterKey(event)">
+		            	<a href="javascript:void(0)" class="i-clear i-clear-pad2" onclick="resetInput(event)"><i class="fa fa-times-circle"></i></a>
+		            	<a href="javascript:changeCode()" id="change_code" class="pad-tip">换一张</a>
+		            </div>
+		            <div class="row_34">
+		            	<img id="code_img" src="/iaaa/servlet/DrawServlet">
+		            </div>
+		         </div>
+		         <div class="row-thin">
+		         	<input type="checkbox" id="remember_check" tabindex="6"><div id="remember_text" onclick="clickCheck()"><i class="fa fa-square-o i-check"></i> 记住账号</div>
+		         </div>
+		         <div class="row-thin">
+		            <span id="msg"></span>
+		         </div>
+		         <div class="row">
+		            <input type="hidden" id="appid" value="portal2017">
+		            <input class="input-btn-row" type="button" id="otp_button" onclick="gotoOTPBind()" value="绑定App" style="display:none;" tabindex="7">
+		            <input type="submit" class="input-btn-row" id="logon_button" onclick="oauthLogon()" value="登录" tabindex="8">
+		            
+		         </div>
+	         </div>
+	         <div id="qrcode_panel" style="display:none;" a="" href="javascript:void(0);">
+		      	<div class="row" style="text-align:center;margin-top:0px; margin-bottom:0px;">
+					<p class="tip" style="text-align:center;margin:20px auto 10px auto;" id="qrcode_tip">使用<a href="https://its.pku.edu.cn/download_portalapp.jsp" target="_blank" class="tip">“北京大学”App</a>扫码进入</p>
+					<img align="top" src="">								
+				</div>
+		       	<div class="row" style="display:block;">
+		       		<p id="jumpBindCodeErrorMsg" style="text-align:center;" class="pku-red" <="" p="">
+	             	</p><p id="otpHelp2" style="text-align:center;display:none;"><a href="/iaaa/resources/help/otpHelp.html" target="_blank">(绑定手机App使用说明)</a></p>
+		       	</div>
+			 </div>	
+	      </div>
+	      
+	      </form>
+	  </div>
+      <div class="bottom">
+         <!--<img src="./resources/images/bdxxfw.jpg" width="86"/>
+      	--><div class="lx_info">
+         	<span>服务热线：010-62751023</span>
+            <span>Email：<a href="mailto:its@pku.edu.cn">its@pku.edu.cn</a></span>
+        	<span>© <a href="http://cc.pku.edu.cn/">北京大学计算中心</a></span>
+        </div>
+      </div>
+   </div>
+
+<script type="text/javascript" src="./resources/javascript/LoginEn.js"></script>
+</body></HTML>
