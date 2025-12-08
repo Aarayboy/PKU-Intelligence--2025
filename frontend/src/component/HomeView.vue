@@ -25,6 +25,7 @@
   max-width: 700px;
   margin: auto;
   text-align: center;
+  padding: 20px;
 }
 
 .desc {

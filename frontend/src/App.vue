@@ -156,7 +156,7 @@ function CloseFileView() {
       @client="() => {chatView = !chatView}"
     />
 
-    <div v-if="chatView">
+    <div v-if="chatView" class="chatWindow">
       <HomeView />
     </div>
 
@@ -172,7 +172,7 @@ function CloseFileView() {
           @done="
             () => {
               // 同步数据后从后端重新加载用户数据以保持一致
-              // loadUserData(currentUser?.id);
+              loadUserData(currentUser?.id);
             }
           "
         ></component>
@@ -236,4 +236,8 @@ function CloseFileView() {
 
 <style scoped>
 /* 全局样式在 main.js 中引入 */
+.chatWindow {
+  flex: 1;
+  padding: 20px;
+}
 </style>
