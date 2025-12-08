@@ -1,5 +1,5 @@
 <script setup>
-const emit = defineEmits(["logout", "cloud"]);
+const emit = defineEmits(["logout", "cloud", "client"]);
 </script>
 <template>
   <div class="bg-white shadow-md">
@@ -13,7 +13,10 @@ const emit = defineEmits(["logout", "cloud"]);
         >
           <img src="../assets/cloud.svg" class="h-5" />
         </button>
-        <button class="p-2 rounded-lg hover:cursor-pointer hover:bg-gray-200">
+        <button 
+          class="p-2 rounded-lg hover:cursor-pointer hover:bg-gray-200"
+          @click="emit('client')"  
+        >
           <img src="../assets/client.svg" class="h-5" />
         </button>
         <button
