@@ -35,6 +35,9 @@ async def chat_endpoint(req: ChatRequest):
         ai_reply = session.chat(req.message)
         return ChatResponse(reply=ai_reply, session_id=req.session_id)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"Error processing chat request: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

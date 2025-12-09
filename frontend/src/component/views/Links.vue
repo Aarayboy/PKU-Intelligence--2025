@@ -5,10 +5,6 @@ import { ref, computed, watch, inject } from 'vue';
 const emit = defineEmits(["DdlDetail"]); // 这行不要管他，我为了消除警告加的
 const userData = inject("userData");
 
-
-// ------------------------------------------------------------------
-// 【修改点 1 & 2】：定义默认数据（作为回退）
-// ------------------------------------------------------------------
 const DEFAULT_LEARNING_LINKS = [
   {
     category: "学术研究与资料库",
@@ -70,10 +66,7 @@ const DEFAULT_LEARNING_LINKS = [
 // 【新增】一个内部 ref 来存储用户对默认数据的修改 (仅在未连接到 userData 时使用)
 const localLearningLinks = ref(DEFAULT_LEARNING_LINKS); 
 
-
-// ------------------------------------------------------------------
-// 【修改点 3】：使用 computed 属性实现数据源切换
-// ------------------------------------------------------------------
+// 计算属性：学习链接分类 (带有 getter 和 setter)
 const learningLinks = computed({
   get() {
     // 检查 userData 是否存在 LinkCategorys 且 LinkCategorys 数组长度大于 0
@@ -99,6 +92,12 @@ const learningLinks = computed({
   }
 });
 
+// 辅助函数：手动保存更改到后端
+const saveChanges = () => {
+    if (userData.value?.linkCategories) {
+        UpdateLinkCategory({ userId: userData.value.id, linkCategories: learningLinks.value });
+    }
+};
 
 // --- 状态管理 ---
 const isLinkPanelOpen = ref(false); 
@@ -215,13 +214,16 @@ const openLink = () => {
         if (shouldTrustInModal.value) {
             // 找到该链接并将其 isTrusted 属性设为 true
             // 由于 learningLinks 是 computed 且带有 setter，所有修改都将通过 Vue 的响应式系统进行
+            let changed = false;
             learningLinks.value.forEach(group => {
                 const foundLink = group.links.find(l => l.url === linkToOpen.value.url);
                 if (foundLink) {
                     // 直接修改链接对象，Vue 会追踪到这个深层修改
                     foundLink.isTrusted = true;
+                    changed = true;
                 }
             });
+            if (changed) saveChanges();
         }
 
         window.open(linkToOpen.value.url, '_blank');
@@ -242,6 +244,7 @@ const removeLink = (category, url) => {
   if (group && confirm(`确定要删除链接 "${group.links.find(l => l.url === url)?.name}" 吗？`)) {
     // 通过替换 links 数组触发响应式更新
     group.links = group.links.filter(link => link.url !== url);
+    saveChanges();
     // 如果在管理侧边栏删除，需要重新计算 linksToManage
     if (currentCategoryToManage.value === category) {
         currentCategoryToManage.value = category; 
@@ -290,6 +293,7 @@ const addLink = () => {
       desc: newLink.value.desc,
       isTrusted: newLink.value.isTrusted, // 保存 isTrusted 属性
     });
+    saveChanges();
 
     // 重置表单并关闭抽屉
     newLink.value.name = '';
@@ -307,6 +311,7 @@ const addLink = () => {
 const toggleLinkTrust = (link) => {
     // 直接修改链接对象，触发响应式更新
     link.isTrusted = !link.isTrusted;
+    saveChanges();
 };
 
 
@@ -335,6 +340,7 @@ const addCategory = () => {
     icon: newCategoryIcon.value || '💡',
     links: [],
   });
+  saveChanges();
 
   // 重置表单
   newCategoryName.value = '';

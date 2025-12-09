@@ -87,6 +87,17 @@ PKU-Intelligence--2025/
    ```
    访问 `http://localhost:8081`
 
+## 测试
+### 前端测试(目前实现了对Note.vue 和 Links.vue 的单元测试)
+1. 进入前端目录:
+   ```bash
+   cd frontend
+   ```
+2. 运行测试:
+   ```bash
+   npm run test
+   ```
+
 ## 代码规范
 
 本项目遵循严格的代码风格规范。详细信息请参考 [CONTRIBUTING.md](./CONTRIBUTING.md)。
