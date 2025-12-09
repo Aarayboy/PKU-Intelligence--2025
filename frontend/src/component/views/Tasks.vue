@@ -1,36 +1,36 @@
 <script setup>
-import { inject, computed, ref, reactive } from "vue";
+import { inject, computed, ref, reactive, watch } from "vue";
 const userData = inject("userData");
 const DdlIdx = inject("DdlIdx");
 const emit = defineEmits(["DdlDetail"]);
-const deadlines = computed(() => userData.deadlines);
+const deadlines = computed(() => {
+  return userData.deadlines || [];
+});
 
-// const deadlines = ref([
-//   {
-//     name: "提交作业1",
-//     deadline: "2024-06-15 23:59",
-//     message: "记得检查格式要求",
-//     status: 0,
-//   },
-//   {
-//     name: "实验报告",
-//     deadline: "2024-06-18 18:00",
-//     message: "数据分析部分待完成",
-//     status: 1,
-//   },
-//   {
-//     name: "项目报告",
-//     deadline: "2024-06-20 17:00",
-//     message: "团队合作完成",
-//     status: 0,
-//   },
-//   {
-//     name: "期末考试复习",
-//     deadline: "2024-06-25 12:00",
-//     message: "重点复习章节1-5balabala",
-//     status: 1,
-//   },
-// ]);
+userData.deadlines;
+import api from "@/api";
+
+const gridIdx = ref([]);
+
+watch(
+  deadlines,
+  () => {
+    gridIdx.value = [];
+    for (let i = 0; i < deadlines.value.length; i++) {
+      if (
+        i === 0 ||
+        deadlines.value[i].deadline.slice(0, 7) !==
+          deadlines.value[i - 1].deadline.slice(0, 7)
+      ) {
+        gridIdx.value.push(i);
+      }
+    }
+  },
+  {
+    immediate: true,
+    deep: true,
+  }
+);
 
 const getStatus = computed(() => {
   return (status) => {
@@ -44,24 +44,27 @@ const getStatus = computed(() => {
   };
 });
 
-function finishWork(idx){
+async function finishWork(idx) {
   // delete idx
-  const elem = document.getElementById("img" + idx);
-  elem.classList.remove("hidden");
-  setTimeout(async () => {
-    deadlines.value.splice(idx, 1);
-    if (elem) {
-      elem.classList.add("hidden");
-    }
-    // const res = await api.UpdateDDL({ userId: userData.id, deadlines: deadlines.value });
-    // TODO: 错误验证
-  }, 300);
-};
+  deadlines.value.splice(idx, 1);
+  const res = await api.UpdateDDL({
+    UserId: userData.userId,
+    deadlines: deadlines.value || [],
+  });
+}
 
 // const changeStatus = (idx, newStatus) => {
 //   deadlines.value[idx].status = newStatus;
 //   // TODO: 调用API保存修改后的任务状态
 // };
+
+const getToMonth = computed(() => {
+  return (date) => {
+    const year = date.slice(0, 4);
+    const month = date.slice(5, 7);
+    return `${year}年${month}月`;
+  };
+});
 
 const showDetail = (idx) => {
   // show detail of deadlines[idx]
@@ -69,76 +72,103 @@ const showDetail = (idx) => {
   emit("DdlDetail");
   console.log("Show detail of ", deadlines.value[idx]);
 };
+
+const SliceIdx = computed(() => {
+  return (idx) => {
+    if (idx < gridIdx.value.length - 1) {
+      // console.log("Slicing from", gridIdx.value[idx], "to", gridIdx.value[idx + 1]);
+      // console.log(
+      //   deadlines.value.slice(
+      //     gridIdx.value[idx],
+      //     gridIdx.value[idx + 1]
+      //   )
+      // );
+      return deadlines.value.slice(gridIdx.value[idx], gridIdx.value[idx + 1]);
+    } else {
+      // console.log("Slicing from", gridIdx.value[idx], "to end");
+      // console.log(
+      //   deadlines.value.slice(gridIdx.value[idx], deadlines.value.length)
+      // );
+      return deadlines.value.slice(gridIdx.value[idx], deadlines.value.length);
+    }
+  };
+});
 </script>
 
 <template>
   <div class="mt-10">
-    <div
-      v-for="(ddl, idx) in deadlines"
-      :key="idx"
-      :id="'deadline-' + idx"
-      class="relative flex"
-    >
-      <!-- 左侧：按钮 + 时间 -->
-      <div class="flex min-w-[140px] mr-3 ml-2 items-center">
-        <button
-          class="w-6 h-6 border-black border-2 rounded-full flex items-center justify-center bg-white mr-2 z-10"
-          @click="finishWork(idx)"
+    <div v-for="(seq, idx1) in gridIdx" :key="idx1" :id="'grid-' + idx1">
+      <!-- header 部分 展示日期  -->
+      <div class="text-lg font-bold text-gray-700 mb-4 mt-4">
+        {{ getToMonth(deadlines[seq].deadline) }}
+      </div>
+      <div class="grid grid-cols-3 gap-7">
+        <div
+          v-for="(ddl, idx) in SliceIdx(idx1)"
+          :key="idx"
+          :id="'ddl-' + idx1 + '-' + idx"
+          class="relative flex card-container"
         >
-          <img
-            src="@/assets/right.svg"
-            class="hidden bg-green-300 rounded-full"
-            :id="'img' + idx"
-          />
-        </button>
-        <span class="text-sm font-semibold text-gray-500">{{
-          deadlines[idx].deadline
-        }}</span>
-      </div>
-
-      <!-- 右侧：内容卡片 -->
-      <div
-        class="ddl-card hover:-translate-y-1 transition-transform duration-300 flex-1 max-h-[100px]"
-        @click="showDetail(idx)"
-      >
-        <div class="text-xl font-medium text-black">
-          {{
-            deadlines[idx].name.length > 10
-              ? deadlines[idx].name.slice(0, 10) + "……"
-              : deadlines[idx].name
-          }}
+          <!-- 内容卡片 -->
+          <div
+            class="ddl-card flex-1 max-h-[300px] w-full cursor-pointer overflow-hidden"
+            :class="{ urgent: parseInt(ddl.status) === 0, 'no-urgent': parseInt(ddl.status) === 1 }"
+            @click="showDetail(seq + idx)"
+            :id="'card-' + idx1 + '-' + idx"
+          >
+            <div class="text-xl font-medium text-black">
+              {{
+                (ddl?.name || "").length > 10
+                  ? (ddl?.name || "").slice(0, 10) + "……"
+                  : ddl?.name || ""
+              }}
+            </div>
+            <p class="text-gray-500">
+              {{
+                (ddl?.message || "").length > 30
+                  ? (ddl?.message || "").slice(0, 30) + "……"
+                  : ddl?.message || ""
+              }}
+            </p>
+            <div class="mt-4 text-sm text-neutral-700">
+              截止时间: {{ ddl.deadline }}
+            </div>
+          </div>
+          <!-- 完成按钮 -->
+          <div
+            class="finish-button absolute top-3 right-3 cursor-pointer border-none rounded-full bg-gray-300 hover:bg-gray-400 transition-colors duration-200 h-5 w-5"
+            @click.stop="finishWork(seq + idx)"
+            :id="'finish-' + idx1 + '-' + idx"
+          ></div>
         </div>
-        <p class="text-gray-500">
-          {{
-            deadlines[idx].message.length > 10
-              ? deadlines[idx].message.slice(0, 10) + "……"
-              : deadlines[idx].message
-          }}
-        </p>
-        <button
-          class="w-4 h-4 rounded-full transition-colors absolute right-6 top-6 ring-4 z-100"
-          :class="getStatus(deadlines[idx].status)"
-        ></button>
-        <!--@click="changeStatus(idx, deadlines[idx].status === 0 ? 1 : 0)"-->
       </div>
-
-      <!-- 竖线 -->
-      <div
-        class="timeline-line ml-2"
-        :class="{ hidden: idx === deadlines.length - 1 }"
-      ></div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .ddl-card {
-  border: 1px solid #ccc;
   border-radius: 8px;
   padding: 24px;
-  margin-bottom: 16px;
+  /* margin-bottom: 8px; */
   background-color: #f9f9f9;
-  box-shadow: 5px 5px 10px rgba(0, 0, 0, 0.1);
+}
+
+.card-container {
+  box-shadow:
+    4px 4px 8px #b5b5b5,
+    -4px -4px 8px #ffffff;
+  border-radius: 12px;
+  background-color: #f0f0f0;
+  position: relative;
+}
+
+.card-container:hover {
+  box-shadow:
+    8px 8px 16px #b5b5b5,
+    -8px -8px 16px #ffffff;
+  transform: translateY(-4px);
+  transition: all 0.3s ease;
 }
 
 .timeline-line {

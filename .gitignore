@@ -43,3 +43,5 @@ backend/uploads/
 desktop.ini
 
 *.tsbuildinfo
+
+.env

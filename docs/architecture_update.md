@@ -2,7 +2,7 @@
 
 ---
 
-## 后端类图（Python / Flask）
+## 后端类图（Python / Flask & FastAPI）
 
 ```mermaid
 classDiagram
@@ -17,6 +17,11 @@ classDiagram
       +cloud_status()
     }
 
+    class ChatApp {
+      +chat_endpoint(req: ChatRequest)
+      +root()
+    }
+
     class Storage {
       db: Database
       +get_user(user_id)
@@ -25,6 +30,15 @@ classDiagram
       +find_user_by_username_or_email(value)
       +add_course(title, tags, user_id)
       +add_note(title, lessonName, tags, files, user_id)
+      +edit_course(user_id, oldname, newname)
+      +edit_note(user_id, courseName, oldname, newname)
+      +add_link_category(user_id, category, icon, sort_order)
+      +get_useful_links_by_category(user_id)
+      +add_useful_link(user_id, category_id, name, url, description, is_trusted)
+      +add_task(user_id, title, description, deadline, priority)
+      +get_tasks(user_id)
+      +update_task(user_id, task_id, updates)
+      +delete_task(user_id, task_id)
     }
 
     class Database {
@@ -40,10 +54,39 @@ classDiagram
       +find_user_by_username_or_email(value)
       +add_course_to_user(user_id, course_title, tags)
       +add_note(title, lessonName, tags, files, user_id)
+      +add_link_category(user_id, category, icon, sort_order)
+      +get_useful_links_by_category(user_id)
+      +add_useful_link(user_id, category_id, name, url, description, is_trusted)
+      +add_task(user_id, title, description, deadline, priority)
+      +get_tasks(user_id)
+      +add_course_schedule(user_id, name, teacher, location, week_type, times)
+      +get_course_schedules(user_id)
+      +update_course_schedule(user_id, schedule_id, updates)
+      +delete_course_schedule(user_id, schedule_id)
+      +update_course_table(user_id, course_table)
+    }
+
+    class ChatSession {
+      +memory: List[Dict]
+      +add(role, content)
+      +chat(user_input)
+    }
+
+    class LLMService {
+      +call_llm_api(messages)
+    }
+
+    class SpiderService {
+      +login_and_get_session(id, password)
+      +collect_all_assignment_texts(session)
+      +call_llm_for_deadlines(raw_items)
     }
 
     FlaskApp --> Storage : uses
     Storage --> Database : uses
+    FlaskApp --> SpiderService : uses
+    ChatApp --> ChatSession : manages
+    ChatSession --> LLMService : calls
 
     class User {
       +id: int
@@ -64,16 +107,58 @@ classDiagram
       +user_id: int
       +course_id: int
     }
+    class LinkCategory {
+      +id: int
+      +name: str
+      +icon: str
+      +user_id: int
+    }
+    class UsefulLink {
+      +id: int
+      +name: str
+      +url: str
+      +category_id: int
+    }
+    class Task {
+      +id: int
+      +title: str
+      +deadline: datetime
+      +user_id: int
+    }
+    class CourseSchedule {
+      +id: int
+      +name: str
+      +teacher: str
+      +location: str
+      +week_type: int
+      +user_id: int
+    }
+    class CourseScheduleTime {
+      +id: int
+      +course_schedule_id: int
+      +time_index: int
+    }
 
     User "1" --> "many" Course
     User "1" --> "many" Note
+    User "1" --> "many" LinkCategory
+    User "1" --> "many" Task
+    User "1" --> "many" CourseSchedule
+    LinkCategory "1" --> "many" UsefulLink
     Course "1" --> "many" Note
+    CourseSchedule "1" --> "many" CourseScheduleTime
 ```
 
 要点：
 - Flask 路由作为控制器层，全部通过 `Storage`（门面）访问 `Database`。
+- `ChatApp` (FastAPI) 独立运行，负责处理 AI 对话请求，管理 `ChatSession`。
+- `SpiderService` 封装了爬虫逻辑，包括登录北大门户、抓取作业信息以及调用 LLM 解析 DDL。
 - `Database` 负责连接复用、DDL 初始化，以及增删查业务。
-- 领域数据以三张表表示：`users`、`courses`、`notes`，`Course.tags` 为 JSON 字符串；`Note.file` 为单文件名（文本）。
+- 领域数据扩展为多张表：`users`、`courses`、`notes`、`link_categories`、`useful_links`、`tasks`、`course_schedules` 等。
+- `Course.tags` 为 JSON 字符串；`Note.file` 为单文件名（文本）。
+- 常用链接 (`UsefulLink`) 按分类 (`LinkCategory`) 组织。
+- 任务 (`Task`) 包含截止日期和状态管理。
+- 课程表 (`CourseSchedule`) 支持多时段 (`CourseScheduleTime`) 和周次类型设置。
 
 ---
 
@@ -91,11 +176,6 @@ classDiagram
       +login(credentials)
       +register(payload)
       +cloud(params)
-      +EditCourse(params)
-      +EditNote(params)
-      +UpdateDDL(params)
-      +UpdateLinkCategory(params)
-      +getSchedule(userId)
       -request(path, options)
     }
 
@@ -109,9 +189,6 @@ classDiagram
       +userId: number|Null
       +email: string
       +courses: MyCourse[]
-      +deadlines: DDL[]
-      +LinkCategorys: LinkCategory[]
-      +courseTable: CourseTable
     }
 
     class MyCourse {
@@ -124,44 +201,6 @@ classDiagram
       +name: string
       +file: string|Null
       +lessonName: string
-    }
-
-    class DDL {
-      +name: string
-      +deadline: string
-      +message: string
-      +status: string
-    }
-
-    class LinkCategory {
-      +category: string
-      +icon: string
-      +links: Link[]
-    }
-
-    class Link {
-      +name: string
-      +url: string
-      +desc: string
-      +isTrusted: boolean
-    }
-
-    class CourseTable {
-      +CourseTableMap: Map
-      +allCourses: Course[]
-      +addCourses(courses)
-      +removeCourseById(courseId)
-      +getCourseByIndex(index)
-      +getCoursesByWeekday(targetWeekday)
-    }
-
-    class Course {
-      +id: string
-      +name: string
-      +teacher: string
-      +location: string
-      +weekType: int
-      +times: int[]
     }
 
     class UseAuth {
@@ -190,8 +229,6 @@ classDiagram
       +loadUserData(userId, setNotification)
       +mapToUserData(payload)
       +ensureUserData(payload)
-      +addCourse(courseData)
-      +removeCourse(courseId)
     }
 
     class App {
@@ -218,55 +255,12 @@ classDiagram
     App --> ChatView : contains
 
     UserData "1" o--> "many" MyCourse
-    UserData "1" o--> "many" DDL
-    UserData "1" o--> "many" LinkCategory
-    UserData "1" o--> "1" CourseTable
     MyCourse "1" o--> "many" MyNote
-    LinkCategory "1" o--> "many" Link
-    CourseTable "1" o--> "many" Course
 ```
 
 要点：
 - `useUserData` 内部定义 `MyCourse / MyNote` 两个类并维护一个全局响应式 `userData`。
-- `useAuth` / `useUserData` 通过 `ApiClient` 访问后端。
+- `useAuth` / `useUserData` 通过 `ApiClient` 访问后端 Flask 服务。
+- `ChatView` 组件通过独立的 `ChatApiClient` 访问后端 FastAPI AI 服务。
 - `App.vue` 提供 `provide` 注入 `userData`、`isLoggedIn`、`currentUser`、`fileview`、`filepath` 等给子组件。
-
----
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

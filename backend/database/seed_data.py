@@ -42,6 +42,16 @@ def add_note(
     """Insert a note row. Returns new note id."""
     db.add_note(name, course_id, [], [file] if file else [], user_id)
 
+def add_ddl(
+    db: Database, user_id: int
+) -> int:
+    """Insert a deadline row. Returns new deadline id."""
+    sample_deadlines = [
+        {"name": "高等数学期中考试", "deadline": "2024-10-15 23:12", "message": "考试提醒", "status": 0},
+        {"name": "数据结构作业1", "deadline": "2024-09-30 23:12", "message": "balabala", "status": 1},
+    ]
+    db.update_deadlines(user_id, sample_deadlines)
+
 
 def seed():
     db = Database()
@@ -75,9 +85,18 @@ def seed():
     add_note(db, bob_id, math_bob["title"], "积分与级数简记")
     add_note(db, bob_id, os_bob["title"], "进程与线程概览")
 
+    add_ddl(db, alice_id)
+    add_ddl(db, bob_id)
+
     # Summary
+    alice_data = {}
+    bob_data = {}
     alice_data = db.get_user_with_courses_and_notes(alice_id)
     bob_data = db.get_user_with_courses_and_notes(bob_id)
+
+    alice_data["deadlines"] = db.get_tasks(alice_id)
+    bob_data["deadlines"] = db.get_tasks(bob_id)
+
     print("Seeded data for Alice:")
     print(json.dumps(alice_data, ensure_ascii=False, indent=2))
     print("Seeded data for Bob:")

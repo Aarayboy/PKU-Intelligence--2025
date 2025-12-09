@@ -7,3 +7,7 @@ beautifulsoup4
 selenium
 black
 isort
+fastapi
+uvicorn[standard]
+pydantic
+openai

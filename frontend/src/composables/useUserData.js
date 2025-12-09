@@ -125,19 +125,16 @@ class CourseTable {
   }
 
   addCourse(courseData) {
-    const course = new Course(courseData);
-    this.allCourses.push(course);
-    course.times.forEach(time => {
-      this.CourseTableMap.set(time, course);
-    });
+    this.addCourses(courseData);
   }
 
-  removeCourse(courseId) {
-    this.allCourses = this.allCourses.filter(course => course.id !== courseId);
-    this.CourseTableMap.forEach((course, time) => {
-      if (course.id === courseId) {
-        this.CourseTableMap.delete(time);
-      }
+  removeCourseById(courseId) {
+    this.allCourses = this.allCourses.filter(c => c.id !== courseId);
+    this.CourseTableMap = new Map();
+    this.allCourses.forEach(course => {
+      course.times.forEach(time => {
+        this.CourseTableMap.set(time, course);
+      });
     });
   }
 
@@ -186,6 +183,8 @@ function mapToUserData(payload) {
       ),
   );
 
+  
+
   const deadlines = (body?.deadlines ?? []).map((d) =>
     new DDL(
       d?.name ?? "",
@@ -220,6 +219,21 @@ function ensureUserData(payload) {
   // If it's already an instance, return as-is. Otherwise map to UserData.
   if (payload instanceof UserData) return payload;
   return mapToUserData(payload);
+}
+
+export function addCourse(courseData) {
+  const current = userData.courseTable?.allCourses ?? [];
+  // 确保传入是对象，避免引用被直接修改
+  const merged = current.concat([courseData]);
+  userData.courseTable = new CourseTable(merged);
+  return userData.courseTable;
+}
+
+export function removeCourse(courseId) {
+  const current = userData.courseTable?.allCourses ?? [];
+  const filtered = current.filter(c => c.id !== courseId);
+  userData.courseTable = new CourseTable(filtered);
+  return userData.courseTable;
 }
 
 async function loadUserData(userId, setNotification) {
@@ -270,7 +284,7 @@ export function generateMockSchedule() {
     {
       id: 3,
       name: '线性代数',
-      teacher: '王教授',
+      teacher: '王老师',
       location: '理教301',
       weekType: 2,
       times: [12, 13, 60, 61]
@@ -279,7 +293,7 @@ export function generateMockSchedule() {
 }
 
 export function useUserData() {
-  return { userData, loadUserData, mapToUserData };
+  return { userData, loadUserData, mapToUserData, addCourse, removeCourse };
 }
 
 export default useUserData;

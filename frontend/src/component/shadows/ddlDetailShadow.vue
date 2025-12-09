@@ -5,33 +5,9 @@ const props = defineProps(["visible", "userId", "data"]);
 const emit = defineEmits(["close", "done", "showNotification"]);
 const userData = inject("userData");
 const DdlIdx = inject("DdlIdx");
-const deadlines = computed(() => userData.deadlines);
-// const deadlines = ref([
-//   {
-//     name: "提交作业1",
-//     deadline: "2024-06-15 23:59",
-//     message: "记得检查格式要求",
-//     status: 0,
-//   },
-//   {
-//     name: "实验报告",
-//     deadline: "2024-06-18 18:00",
-//     message: "数据分析部分待完成",
-//     status: 1,
-//   },
-//   {
-//     name: "项目报告",
-//     deadline: "2024-06-20 17:00",
-//     message: "团队合作完成",
-//     status: 0,
-//   },
-//   {
-//     name: "期末考试复习",
-//     deadline: "2024-06-25 12:00",
-//     message: "重点复习章节1-5balabala",
-//     status: 1,
-//   },
-// ]);
+const deadlines = ref(userData.deadlines);
+
+const shadowPageDDl = deadlines.value;
 
 const MynewTasks = reactive({
   name: "",
@@ -43,10 +19,13 @@ const selectNumber = ref(0);
 
 const getTask = computed(() => {
   if (DdlIdx.value >= 0 && DdlIdx.value < deadlines.value.length) {
-    return deadlines.value[DdlIdx.value];
-  } else {
-    return MynewTasks;
+    MynewTasks.name = deadlines.value[DdlIdx.value].name;
+    MynewTasks.deadline = deadlines.value[DdlIdx.value].deadline;
+    MynewTasks.message = deadlines.value[DdlIdx.value].message;
+    MynewTasks.status = deadlines.value[DdlIdx.value].status;
+    selectNumber.value = String(deadlines.value[DdlIdx.value].status);
   }
+  return MynewTasks;
 });
 
 const finishWork = async (idx) => {
@@ -54,46 +33,53 @@ const finishWork = async (idx) => {
   if (idx >= 0 && idx < deadlines.value.length) {
     console.log("edit existing task");
     // edit existing task
-    if (!getTask.value.name || !getTask.value.deadline) {
+    if (!MynewTasks.name || !MynewTasks.deadline) {
       emit("showNotification", "错误", "任务名称和截止时间不能为空", false);
       return;
     }
-    getTask.value.status = parseInt(selectNumber.value);
-    getTask.value.deadline = formatIsoToCustom(getTask.value.deadline);
+    const tmpDDL = {
+      name: MynewTasks.name,
+      deadline: formatIsoToCustom(MynewTasks.deadline),
+      message: MynewTasks.message || "这里什么也没有~",
+      status: parseInt(selectNumber.value),
+    };
+    shadowPageDDl[idx] = tmpDDL;
   } else {
     // add new task
     console.log("add new task");
-    if (!getTask.value.name || !getTask.value.deadline) {
+    if (!MynewTasks.name || !MynewTasks.deadline) {
       emit("showNotification", "错误", "任务名称和截止时间不能为空", false);
       return;
     }
-    deadlines.value.push({
-      name: getTask.value.name,
-      deadline: formatIsoToCustom(getTask.value.deadline),
-      message: getTask.value.message || "这里什么也没有~",
+    shadowPageDDl.push({
+      name: MynewTasks.name,
+      deadline: formatIsoToCustom(MynewTasks.deadline),
+      message: MynewTasks.message || "这里什么也没有~",
       status: parseInt(selectNumber.value),
     });
   }
-  // const res = await api.UpdateDDL({ userId: userData.id, deadlines: deadlines.value });
+  sortTimeLine();
+  deadlines.value = shadowPageDDl;
+  console.log(userData.userId)
+  const res = await api.UpdateDDL({ UserId: userData.userId, deadlines: deadlines.value || [] });
   // TODO: 错误验证
   console.log(deadlines.value);
   emit("showNotification", "成功", "任务已保存", true);
-  sortTimeLine();
   emit("close");
   emit("done");
 };
 
 function sortTimeLine() {
-  for (let i = 0; i < deadlines.value.length - 1; i++) {
-    for (let j = 0; j < deadlines.value.length - i - 1; j++) {
+  for (let i = 0; i < shadowPageDDl.length - 1; i++) {
+    for (let j = 0; j < shadowPageDDl.length - i - 1; j++) {
       if (
-        new Date(deadlines.value[j].deadline) >
-        new Date(deadlines.value[j + 1].deadline)
+        new Date(shadowPageDDl[j].deadline) >
+        new Date(shadowPageDDl[j + 1].deadline)
       ) {
         // 交换
-        const temp = deadlines.value[j];
-        deadlines.value[j] = deadlines.value[j + 1];
-        deadlines.value[j + 1] = temp;
+        const temp = shadowPageDDl[j];
+        shadowPageDDl[j] = shadowPageDDl[j + 1];
+        shadowPageDDl[j + 1] = temp;
       }
     }
   }
@@ -162,7 +148,7 @@ function formatIsoToCustom(isoString) {
         
         <!-- 紧急程度 -->
         <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-2">紧急程度</label>
+          <label class="block text-sm font-medium text-gray-700 mb-2">状态</label>
           <div class="flex items-center space-x-6">
             <div class="flex items-center">
               <input
