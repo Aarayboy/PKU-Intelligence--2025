@@ -20,6 +20,8 @@ def find_user_by_username_or_email(value):
 def add_user(username, email, password):
     user = db.add_user(username, email, password)
     # 返回不包含密码的用户信息
+    if not user:
+        return None
     user_copy = user.copy()
     return user_copy
 
