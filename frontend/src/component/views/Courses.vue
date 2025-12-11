@@ -181,7 +181,8 @@ const loadSchedule = async (useMock = false) => {
       userData.updateCourseTable(mockData);
     } else {
       const res = await api.getSchedule(userData.userId);
-      userData.updateCourseTable(res.courses || []);
+      console.log("加载课表数据：", res);
+      userData.updateCourseTable(res.courseTable || []);
     }
   } catch (err) {
     setNotification("加载失败，请检查后端服务", "使用模拟数据展示", false);
@@ -190,7 +191,7 @@ const loadSchedule = async (useMock = false) => {
 };
 
 onMounted(() => {
-  loadSchedule(import.meta.env.DEV);
+  loadSchedule(false);
 });
 </script>
 
