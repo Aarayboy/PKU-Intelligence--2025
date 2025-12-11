@@ -60,6 +60,7 @@ async function finishWork(idx) {
 
 const getToMonth = computed(() => {
   return (date) => {
+    if (!date || date.length < 7) return date;
     const year = date.slice(0, 4);
     const month = date.slice(5, 7);
     return `${year}年${month}月`;
