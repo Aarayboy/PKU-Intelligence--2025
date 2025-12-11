@@ -1,6 +1,6 @@
 // 简单的前后端请求封装，带超时支持
 const BASE = import.meta.env.VITE_API_BASE || "";
-const DEFAULT_TIMEOUT = 15000; // 毫秒，默认 15 秒
+const DEFAULT_TIMEOUT = 30000; // 毫秒，默认 30 秒
 
 async function request(path, options = {}) {
   const url = `${BASE}${path}`;

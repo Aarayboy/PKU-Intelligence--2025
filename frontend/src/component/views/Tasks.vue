@@ -112,7 +112,7 @@ const SliceIdx = computed(() => {
           <!-- 内容卡片 -->
           <div
             class="ddl-card flex-1 max-h-[300px] w-full cursor-pointer overflow-hidden"
-            :class="{ urgent: ddl.status === 0, 'no-urgent': ddl.status === 1 }"
+            :class="{ urgent: parseInt(ddl.status) === 0, 'no-urgent': parseInt(ddl.status) === 1 }"
             @click="showDetail(seq + idx)"
             :id="'card-' + idx1 + '-' + idx"
           >

@@ -31,3 +31,8 @@ coverage
 *.sw?
 
 *.tsbuildinfo
+
+.env
+
+# 测试文件
+frontend/src/components/__tests__

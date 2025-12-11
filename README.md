@@ -6,15 +6,12 @@ PKU 智慧助手 (PKU-Intelligence) 是一个集成了课程管理、笔记记�
 
 本项目采用前后端分离架构：
 
-<<<<<<< HEAD
 - **前端**: Vue 3 + Vite + Tailwind CSS
 - **后端**: Flask + SQLite
 - **爬虫**: Python (Selenium + BeautifulSoup)
-=======
 ```shell
 python seed.py
 ```
->>>>>>> 66cf2ebc7207bceb92b468d6b5b0c32299190dcf
 
 ### 目录结构
 
@@ -32,7 +29,7 @@ PKU-Intelligence--2025/
 └── README.md               # 项目说明
 ```
 
-## 快速开始
+## 启动
 
 ### 环境要求
 
@@ -45,19 +42,34 @@ PKU-Intelligence--2025/
    ```bash
    cd backend
    ```
-2. 安装依赖:
+2. 创建环境(optional)
    ```bash
-   pip install -r requirements.txt
+   uv venv --python 3.12
+   # 启动环境
+   .venv\Scripts\activate # windows
+   source .venv/bin/activate # Mac&Linux
    ```
-3. (可选) 创建模拟数据:
+  
+3. 安装依赖:
+   ```bash
+   (uv) pip install -r requirements.txt
+   ```
+4. (可选) 创建模拟数据。注：会自动运行clear.py删除旧数据
    ```bash
    python seed.py
+   uv run seed.py # uv
    ```
-4. 启动 Flask 服务:
+5. 启动 Flask 服务:
    ```bash
    python app.py
+   uv run app.py # uv
    ```
    服务将运行在 `http://localhost:4000`
+6. 启动AI chat 服务
+   ```bash
+   python chatapp.py
+   uv run chatapp.py # uv
+   ```
 
 ### 前端启动
 
@@ -74,6 +86,17 @@ PKU-Intelligence--2025/
    npm run dev
    ```
    访问 `http://localhost:8081`
+
+## 测试
+### 前端测试(目前实现了对Note.vue 和 Links.vue 的单元测试)
+1. 进入前端目录:
+   ```bash
+   cd frontend
+   ```
+2. 运行测试:
+   ```bash
+   npm run test
+   ```
 
 ## 代码规范
 

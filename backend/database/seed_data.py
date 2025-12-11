@@ -85,9 +85,18 @@ def seed():
     add_note(db, bob_id, math_bob["title"], "积分与级数简记")
     add_note(db, bob_id, os_bob["title"], "进程与线程概览")
 
+    add_ddl(db, alice_id)
+    add_ddl(db, bob_id)
+
     # Summary
+    alice_data = {}
+    bob_data = {}
     alice_data = db.get_user_with_courses_and_notes(alice_id)
     bob_data = db.get_user_with_courses_and_notes(bob_id)
+
+    alice_data["deadlines"] = db.get_tasks(alice_id)
+    bob_data["deadlines"] = db.get_tasks(bob_id)
+
     print("Seeded data for Alice:")
     print(json.dumps(alice_data, ensure_ascii=False, indent=2))
     print("Seeded data for Bob:")

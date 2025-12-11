@@ -202,6 +202,13 @@ function Del_Course(Coursename) {
             </div>
 
             <div class="flex items-center space-x-2">
+              <button class ="p-1" @click="
+                () => {
+                  EditCourseName[index] = !EditCourseName[index];
+                  UserInput = course.name;
+                }">
+                <img src="@/assets/rename.png" class="h-5" />
+              </button>
               <button class="p-1" @click="DisplayNotesList(index)">
                 <svg
                   :id="'icon-' + index"
