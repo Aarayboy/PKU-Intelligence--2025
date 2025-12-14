@@ -52,6 +52,16 @@ def add_ddl(
     ]
     db.update_deadlines(user_id, sample_deadlines)
 
+def add_courseTable(
+    db: Database, user_id: int
+) -> int:
+    """Insert a course schedule row. Returns new course schedule id."""
+    sample_courseTable = [
+        {"name": "高等数学",  "times": (1,2,3) ,"location": "教学楼A101", "teacher": "张三", "weekType": 0},
+        {"name": "数据结构", "times":(4,5) ,"location": "教学楼B202", "teacher": "李四", "weekType": 1},
+    ]
+    db.add_course_schedule(user_id, sample_courseTable[0]["name"], sample_courseTable[0]["teacher"],  sample_courseTable[0]["location"],  sample_courseTable[0]["weekType"], sample_courseTable[0]["times"])
+    db.add_course_schedule(user_id, sample_courseTable[1]["name"],  sample_courseTable[1]["teacher"],sample_courseTable[1]["location"], sample_courseTable[1]["weekType"],sample_courseTable[1]["times"])
 
 def seed():
     db = Database()
@@ -85,9 +95,21 @@ def seed():
     add_note(db, bob_id, math_bob["title"], "积分与级数简记")
     add_note(db, bob_id, os_bob["title"], "进程与线程概览")
 
+    add_ddl(db, alice_id)
+    add_ddl(db, bob_id)
+
+    add_courseTable(db, alice_id)
+    add_courseTable(db, bob_id)
+
     # Summary
+    alice_data = {}
+    bob_data = {}
     alice_data = db.get_user_with_courses_and_notes(alice_id)
     bob_data = db.get_user_with_courses_and_notes(bob_id)
+
+    alice_data["deadlines"] = db.get_tasks(alice_id)
+    bob_data["deadlines"] = db.get_tasks(bob_id)
+
     print("Seeded data for Alice:")
     print(json.dumps(alice_data, ensure_ascii=False, indent=2))
     print("Seeded data for Bob:")

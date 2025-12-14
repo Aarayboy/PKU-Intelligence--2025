@@ -6,7 +6,6 @@ from .storage import (
     find_user_by_credentials,
     find_user_by_username_or_email,
     get_user,
-    # 新增的方法
     edit_course,
     edit_note,
     add_link_category,
@@ -20,6 +19,11 @@ from .storage import (
     update_task,
     delete_task,
     update_deadlines,
+    add_course_schedule,
+    get_course_schedules,
+    update_course_schedule,
+    delete_course_schedule,
+    update_course_table,
 )
 
 __all__ = [
@@ -44,5 +48,10 @@ __all__ = [
     "update_task",
     "delete_task",
     "update_deadlines",
+    add_course_schedule,
+    get_course_schedules,
+    update_course_schedule,
+    delete_course_schedule,
+    update_course_table,
     "seed",
 ]

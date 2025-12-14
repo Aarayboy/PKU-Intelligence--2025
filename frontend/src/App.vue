@@ -9,6 +9,7 @@ import RegisterModal from "./component/RegisterModal.vue";
 import WelcomePage from "./component/WelcomePage.vue";
 import CloudShadow from "./component/shadows/CloudShadow.vue";
 import ddlDetailShadow from "./component/shadows/ddlDetailShadow.vue";
+import HomeView from "./component/HomeView.vue";
 
 import { useAuth } from "./composables/useAuth";
 import { useUserData } from "./composables/useUserData";
@@ -27,6 +28,7 @@ const showCloudModal = ref(false);
 const showDdlDetailModal = ref(false);
 // 新增：课表相关状态
 const showScheduleModal = ref(false);
+const chatView = ref(false);
 
 const DdlIdx = ref(-1);
 
@@ -151,9 +153,14 @@ function CloseFileView() {
       :user="currentUser"
       @logout="handleLogout"
       @cloud="() => (showCloudModal = true)"
+      @client="() => {chatView = !chatView}"
     />
 
-    <div class="flex w-full justify-center">
+    <div v-if="chatView" class="chatWindow">
+      <HomeView />
+    </div>
+
+    <div class="flex w-full justify-center" v-if="!chatView">
       <div class="w-full max-w-7xl px-4">
         <component
           :is="shadowSelector()"
@@ -165,7 +172,7 @@ function CloseFileView() {
           @done="
             () => {
               // 同步数据后从后端重新加载用户数据以保持一致
-              // loadUserData(currentUser?.id);
+              loadUserData(currentUser?.id);
             }
           "
         ></component>
@@ -229,4 +236,8 @@ function CloseFileView() {
 
 <style scoped>
 /* 全局样式在 main.js 中引入 */
+.chatWindow {
+  flex: 1;
+  padding: 20px;
+}
 </style>

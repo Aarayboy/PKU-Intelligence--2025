@@ -56,11 +56,13 @@ def userdata():
     linkCategories = storage.get_useful_links_by_category(user_id)
     
     # 获取用户的 courseTable
-    # courseTable = storage.get_course_schedules(user_id)
-    
+    courseTable = storage.get_course_schedules(user_id)
+    if not courseTable:
+        courseTable = []
+    print(courseTable)
     user["deadlines"] = deadlines
     user["linkCategories"] = linkCategories
-    # user["courseTable"] = courseTable
+    user["courseTable"] = courseTable
     
     return jsonify({"data": user})
 
@@ -468,7 +470,7 @@ def cloud_status():
             else:
                 status_str = status or "1"
 
-            new_task = storage.add_task(userId, name, deadline_str, message, status_str)
+            new_task = storage.add_task(userId, name, message, deadline_str, status_str)
 
             if new_task:
                 created_tasks.append(new_task)
@@ -797,7 +799,7 @@ def create_course_schedule():
     
     return jsonify({"success": True, "course": new_schedule}), 201
 
-@app.route("/course-table", methods=["GET"])
+@app.route("/schedule", methods=["GET"])
 def get_course_table():
     """
     获取用户的课表

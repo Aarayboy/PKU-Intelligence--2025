@@ -9,7 +9,6 @@ const { setNotification } = useNotification();
 const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
 const deleteMode = ref(false);
 
-// 颜色相关（保持不变）
 const generateColorPalette = (count) => {
   if (count <= 1) return ['hsl(210, 70%, 80%)'];
   const palette = [];
@@ -43,7 +42,6 @@ const getCourseColor = (course) => {
   return courseColorMap.value[course.id] || '#e5e7eb';
 };
 
-// 新增课程：弹窗表单状态
 const showAddModal = ref(false);
 const form = reactive({
   name: "",
@@ -95,6 +93,14 @@ const colEmpty = computed(() => {
     }
     return true;
   });
+});
+
+const gridTemplate = computed(() => {
+  const firstCol = 'minmax(100px, max-content)';
+  const dayCols = weekdays.map((_, i) =>
+    colEmpty.value[i] ? 'minmax(36px, max-content)' : 'minmax(100px, max-content)'
+  );
+  return [firstCol, ...dayCols].join(' ');
 });
 
 // 提交新增：构建 times 索引并调用 composable / 后端（若存在）
@@ -175,7 +181,8 @@ const loadSchedule = async (useMock = false) => {
       userData.updateCourseTable(mockData);
     } else {
       const res = await api.getSchedule(userData.userId);
-      userData.updateCourseTable(res.courses || []);
+      console.log("加载课表数据：", res);
+      userData.updateCourseTable(res.courseTable || []);
     }
   } catch (err) {
     setNotification("加载失败，请检查后端服务", "使用模拟数据展示", false);
@@ -184,7 +191,7 @@ const loadSchedule = async (useMock = false) => {
 };
 
 onMounted(() => {
-  loadSchedule(import.meta.env.DEV);
+  loadSchedule(false);
 });
 </script>
 
@@ -193,10 +200,10 @@ onMounted(() => {
     <div class="flex justify-between items-center mb-6">
       <h2 class="text-2xl font-bold">我的课表</h2>
       <div class="flex gap-2">
-        <button class="bg-blue-500 text-white px-3 py-1 rounded" @click="openAddModal">新增课程</button>
+        <button class="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-green-600 hover:cursor-pointer transition-all duration-200" @click="openAddModal">新增课程</button>
         <button
           @click="toggleDeleteMode"
-          :class="deleteMode ? 'bg-red-500 text-white px-3 py-1 rounded' : 'bg-gray-200 text-black px-3 py-1 rounded'"
+          :class="deleteMode ? 'bg-red-500 text-white px-3 py-1 rounded' : 'px-4 py-2 rounded-lg bg-red-500 text-white hover:bg-green-600 hover:cursor-pointer transition-all duration-200'"
           title="切换删除模式：开启后可点击课程右上角删除"
         >
           {{ deleteMode ? '退出删除' : '删除' }}
@@ -205,57 +212,58 @@ onMounted(() => {
     </div>
 
     <!-- 课表展示 -->
-    <div class="bg-white rounded-lg shadow overflow-hidden border border-black-200">
-      <!-- 表头 -->
-      <div class="grid grid-cols-8">
-        <div class="col-span-1 bg-gray-100 p-2 font-medium border border-black">时间/星期</div>
+    <div class="overflow-auto flex justify-center">
+      <div class="inline-grid mx-auto gap-0" :style="{ gridTemplateColumns: gridTemplate }">
+        <!-- 表头 -->
+        <div class="bg-gray-100 p-2 font-medium border border-black flex items-center justify-center">时间/星期</div>
         <div 
-          class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-black" 
-          v-for="day in weekdays" 
-          :key="day"
+          v-for="(day, dayIdx) in weekdays" 
+          :key="'h-'+dayIdx"
+          class="bg-gray-100 p-2 font-medium text-center border border-black flex items-center justify-center"
         >
           {{ day }}
         </div>
-      </div>
-      
-      <div v-for="period in 12" :key="period" class="grid grid-cols-8">
-        <div 
-          class="col-span-1 bg-gray-100 p-2 font-medium text-center border border-black"
-          :class="rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[100px]'"
-        >
-          第{{ period }}节
-        </div>
-        <div 
-          v-for="(day, dayIdx) in weekdays" 
-          :key="dayIdx"
-          :class="[
-            'col-span-1 p-1 border border-black flex items-stretch overflow-hidden',
-            rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[100px]'
-          ]"
-        >
+
+        <template v-for="period in 12" :key="'row-'+period">
           <div 
-            v-if="userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1))"
-            class="p-2 rounded-md relative w-full h-full box-border"
-            :style="{ 
-              backgroundColor: getCourseColor(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)))
-            }"
+            class="bg-gray-100 p-2 font-medium border border-black flex items-center justify-center"
+            :class="rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[100px]'"
           >
-            <button
-              v-if="deleteMode"
-              class="absolute top-1 right-1 text-xs bg-red-500 text-white rounded px-1"
-              @click.stop="onRemoveCourse(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).id)"
-            >删除</button>
-            <div class="font-medium text-sm truncate">
-              {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).name }}
-            </div>
-            <div class="text-xs text-gray-600 truncate">
-              {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).teacher }}
-            </div>
-            <div class="text-xs text-gray-600 truncate">
-              {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).location }}
+            第{{ period }}节
+          </div>
+
+          <div 
+            v-for="(day, dayIdx) in weekdays" 
+            :key="dayIdx + '-' + period"
+            :class="[
+              'col-span-1 p-1 border border-black flex items-center justify-center overflow-hidden',
+              rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[100px]'
+            ]"
+          >
+            <div 
+              v-if="userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1))"
+              class="p-2 rounded-md relative w-full h-full box-border flex flex-col items-center justify-center text-center"
+              :style="{ 
+                backgroundColor: getCourseColor(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)))
+              }"
+            >
+              <button
+                v-if="deleteMode"
+                class="absolute top-1 right-1 text-xs bg-red-500 text-white rounded px-1"
+                @click.stop="onRemoveCourse(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).id)"
+              >删除</button>
+              <div class="font-medium text-sm truncate">
+                {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).name }}
+              </div>
+              <div class="text-xs text-gray-600 truncate">
+                {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).teacher }}
+              </div>
+              <div class="text-xs text-gray-600 truncate">
+                {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).location }}
+              </div>
             </div>
           </div>
-        </div>
+        </template>
       </div>
     </div>
 
@@ -320,12 +328,8 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.grid-cols-8 {
-  grid-template-columns: repeat(8, minmax(0, 1fr));
-}
 :deep(.truncate) {
   color: #333;
   text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }
-/* 简单 modal 居中样式（如需更复杂可提取到全局样式） */
 </style>

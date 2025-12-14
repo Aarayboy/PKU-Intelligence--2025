@@ -20,6 +20,8 @@ def find_user_by_username_or_email(value):
 def add_user(username, email, password):
     user = db.add_user(username, email, password)
     # 返回不包含密码的用户信息
+    if not user:
+        return None
     user_copy = user.copy()
     return user_copy
 
@@ -82,7 +84,7 @@ def delete_useful_link(user_id, link_id):
 # 任务管理相关方法
 def add_task(user_id, title, description, deadline, priority=1):
     """添加任务"""
-    return db.add_task(user_id, title, description, deadline, priority)
+    return db.add_task(user_id, title, deadline, description, priority)
 
 
 def get_tasks(user_id):
@@ -103,3 +105,23 @@ def delete_task(user_id, task_id):
 def update_deadlines(user_id, deadlines):
     """批量更新用户的DDL列表"""
     return db.update_deadlines(user_id, deadlines)
+
+def add_course_schedule(user_id, name, teacher, location, week_type, times):
+    """添加课程表"""
+    return db.add_course_schedule(user_id, name, teacher, location, week_type, times)
+
+def get_course_schedules(user_id):
+    """获取用户的所有课程表"""
+    return db.get_course_schedules(user_id)
+
+def update_course_schedule(user_id, schedule_id, **updates):
+    """更新课程表信息"""
+    return db.update_course_schedule(user_id, schedule_id, **updates)
+
+def delete_course_schedule(user_id, schedule_id):
+    """删除课程表"""
+    return db.delete_course_schedule(user_id, schedule_id)
+
+def update_course_table(user_id, course_table):
+    """批量更新用户的课表"""
+    return db.update_course_table(user_id, course_table)

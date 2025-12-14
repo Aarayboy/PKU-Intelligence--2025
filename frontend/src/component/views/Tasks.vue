@@ -60,6 +60,7 @@ async function finishWork(idx) {
 
 const getToMonth = computed(() => {
   return (date) => {
+    if (!date || date.length < 7) return "未知日期";
     const year = date.slice(0, 4);
     const month = date.slice(5, 7);
     return `${year}年${month}月`;
@@ -112,7 +113,7 @@ const SliceIdx = computed(() => {
           <!-- 内容卡片 -->
           <div
             class="ddl-card flex-1 max-h-[300px] w-full cursor-pointer overflow-hidden"
-            :class="{ urgent: ddl.status === 0, 'no-urgent': ddl.status === 1 }"
+            :class="{ urgent: parseInt(ddl.status) === 0, 'no-urgent': parseInt(ddl.status) === 1 }"
             @click="showDetail(seq + idx)"
             :id="'card-' + idx1 + '-' + idx"
           >
