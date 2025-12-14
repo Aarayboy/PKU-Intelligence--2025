@@ -5,9 +5,7 @@ import dotenv
 from flask import Flask, jsonify, request, send_from_directory, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
-
 from spider.sync_schedule import sync_schedule
-
 import spider.login as login
 import spider.spider as spider
 import spider.ddl_LLM as ddl_LLM
@@ -341,11 +339,27 @@ def cloud_status():
             jsonify({"success": False, "error": "userId, xuehao和password均为必填"}),
             400,
         )
-
+    
     # 先获取课程列表，course为空即为需要爬取所有课程名字
     if course == None or course == "":
+        # =======================
+        # 同步课表（新增）
+        # =======================
+        try:
+            print("开始同步课表...")
+
+            # 1. 爬取课表
+            course_table = sync_schedule(xuehao, password)
+
+            # 2 写入数据库（覆盖式更新）
+            storage.update_course_table(userId, course_table)
+
+            # 3 终端输出课表信息
+            print("✅ 课表同步成功，课程如下：")
+            print({"courseTable": course_table})
+        except Exception as e:
+            print(f"课表同步失败: {e}")
         session = get_session(xuehao, password)
-        # sample_courses = [{'id': 1, 'name': '计算机网络'}, {'id': 2, 'name': '操作系统'}] # 示例课程列表
         courses = spider.get_current_semester_course_list(session)
         _courses = courses
         return (
@@ -482,6 +496,7 @@ def cloud_status():
         #     ),
         #     200,
         # )
+
 
 
 @app.route("/edit/course", methods=["POST"])
