@@ -238,6 +238,5 @@ function CloseFileView() {
 /* 全局样式在 main.js 中引入 */
 .chatWindow {
   flex: 1;
-  padding: 20px;
 }
 </style>
