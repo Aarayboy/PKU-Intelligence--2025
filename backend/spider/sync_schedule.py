@@ -201,20 +201,107 @@ def save_course_grid_to_csv(grid: List[List[str]],
             # 每一行前面加上节次编号（1~12）
             writer.writerow([i] + row)
 
+def parse_grid_to_db_courses(grid):
+    """
+    输出结构：可直接传入 update_course_table(user_id, course_table)
+    """
+    import re
+    from collections import defaultdict
+
+    raw = []
+
+    # Step 1：逐格解析
+    for row in range(len(grid)):
+        for col in range(len(grid[row])):
+            cell = grid[row][col]
+            if not cell.strip():
+                continue
+
+            lines = [l.strip() for l in cell.splitlines() if l.strip()]
+            if not lines:
+                continue
+
+            # 课程名
+            m = re.match(r"(.*?)\((.*?)\)", lines[0])
+            if not m:
+                continue
+            name = m.group(1)
+
+            info_line = next((l for l in lines if l.startswith("上课信息")), "")
+
+            # 教师
+            teacher_match = re.search(r"教师：([^\s,，]+)", info_line)
+            teacher = teacher_match.group(1) if teacher_match else ""
+
+            # 教室
+            loc_match = re.search(
+                r"(一教|二教|三教|理教|地学|文史|承泽园|新奥工学大楼)[^\s]*",
+                info_line
+            )
+            location = loc_match.group(0) if loc_match else ""
+
+            # 周类型
+            if "单周" in info_line:
+                week_type = 1
+            elif "双周" in info_line:
+                week_type = 2
+            else:
+                week_type = 0  # 每周
+
+            time_index = row * 7 + col
+
+            raw.append({
+                "name": name,
+                "teacher": teacher,
+                "location": location,
+                "week_type": week_type,
+                "time_index": time_index,
+            })
+
+    # Step 2：按课程聚合
+    course_map = defaultdict(list)
+    for r in raw:
+        key = (r["name"], r["teacher"], r["location"], r["week_type"])
+        course_map[key].append(r["time_index"])
+
+    # Step 3：生成最终 CourseTable
+    result = []
+    for (name, teacher, location, week_type), times in course_map.items():
+        result.append({
+            "name": name,
+            "teacher": teacher,
+            "location": location,
+            "weekType": week_type,
+            "times": sorted(set(times)),
+        })
+
+    return result
+
+
+
 def sync_schedule(username: str, password: str):
+    """
+    同步课表：
+    - 成功：返回 List[Dict]（course_table）
+    - 失败：直接抛异常
+    """
 
-
+    # 1. 抓取 HTML
     html = fetch_course_table_html(username, password)
-    if html is None:
-        return False, "登录或获取课表页面失败"
+    if not isinstance(html, str):
+        raise RuntimeError("登录失败或未获取到课表 HTML")
 
-    try:
-        grid = parse_course_table(html)
-        save_course_grid_to_csv(grid)  # 保存课表到 CSV 文件
-        data = {"grid": grid}
-        return True, data
-    except Exception as e:
-        return False, f"解析课表失败: {e}"
+    # 2. HTML -> grid
+    grid = parse_course_table(html)
+    if not isinstance(grid, list):
+        raise RuntimeError("解析课表 HTML 失败，未生成 grid")
+
+    # 3. grid -> 数据库 CourseTable
+    course_table = parse_grid_to_db_courses(grid)
+    if not isinstance(course_table, list):
+        raise RuntimeError("课表 grid 转数据库结构失败")
+
+    return course_table
 
 
 if __name__ == "__main__":
