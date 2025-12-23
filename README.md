@@ -97,6 +97,39 @@ PKU-Intelligence--2025/
    ```bash
    npm run test
    ```
+### 后端测试
+1. 进入总目录：
+    ```bash
+   cd PKU-Intelligence--2025
+   ```
+2. 运行测试：
+    ```bash
+   python -m pytest -q
+   ```
+3. 测试内容：
+    #### tests/test_basic.py
+    - 注册 / 登录：成功、缺字段 400、冲突 409、无效登录 401/400  
+    - userdata：admin 正常；不存在用户 404  
+    - 课程创建：创建后能在 userdata 中看到  
+
+    #### tests/test_cloud.py
+    - /cloud 校验：缺必填字段 400；course 非整数 400  
+    - course 为空：并发同步课表 + 返回课程列表  
+    - course 非空：下载课件 + 解析 DDL，校验 notes/deadlines 结构  
+
+    #### tests/test_tasks.py
+    - /edit/deadline：正常更新、缺 userId/空列表 400、幂等  
+    - 课表：完整 CRUD、必填校验 400、跨用户隔离、无效 id 更新/删除 400  
+
+    #### tests/test_notes.py
+    - 上传笔记：缺字段 400、多文件 400、无课程返回 note=None  
+    - 上传 → 列表 → 下载 happy path  
+    - /notes/files：不存在课程 404  
+    - 重命名文件期望（当前未实现，xfail）  
+    - 链接：创建/列出/删除；缺字段 400；跨用户隔离  
+
+
+
 
 ## 代码规范
 
