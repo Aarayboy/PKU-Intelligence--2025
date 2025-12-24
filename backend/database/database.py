@@ -535,13 +535,17 @@ class Database:
         """
         修改笔记名称
         """
+        import os
+        from pathlib import Path
+        import shutil
+        
         conn = self.get_db_connection()
         cursor = conn.cursor()
         try:
             with conn:
                 # 获取课程ID
                 cursor.execute(
-                    "SELECT id FROM courses WHERE user_id = ? AND title = ?",
+                    "SELECT id, title FROM courses WHERE user_id = ? AND title = ?",
                     (user_id, course_name)
                 )
                 course = cursor.fetchone()
@@ -549,6 +553,7 @@ class Database:
                     return {"error": "课程不存在"}
                 
                 course_id = course["id"] if isinstance(course, sqlite3.Row) else course[0]
+                course_title = course["title"] if isinstance(course, sqlite3.Row) else course[1]
                 
                 # 检查新名称是否已存在
                 cursor.execute(
@@ -559,7 +564,19 @@ class Database:
                 if existing:
                     return {"error": "笔记名称已存在"}
                 
-                # 更新笔记名称
+                # 1. 获取原笔记信息
+                cursor.execute(
+                    "SELECT id, file FROM notes WHERE user_id = ? AND course_id = ? AND name = ?",
+                    (user_id, course_id, old_note_name)
+                )
+                note = cursor.fetchone()
+                if not note:
+                    return {"error": "笔记不存在或无权修改"}
+                
+                note_id = note["id"] if isinstance(note, sqlite3.Row) else note[0]
+                old_file_name = note["file"] if isinstance(note, sqlite3.Row) else note[1]
+                
+                # 2. 更新数据库中的笔记名称
                 cursor.execute(
                     "UPDATE notes SET name = ? WHERE user_id = ? AND course_id = ? AND name = ?",
                     (new_note_name, user_id, course_id, old_note_name)
@@ -568,11 +585,31 @@ class Database:
                 if cursor.rowcount == 0:
                     return {"error": "笔记不存在或无权修改"}
                 
+                # 3. 更新文件系统（如果存在对应的文件）
+                if old_file_name:
+                    # 构建旧的和新的文件路径
+                    old_dir = Path(STOREBASE_DIR) / str(user_id) / str(course_title) / str(old_note_name)
+                    new_dir = Path(STOREBASE_DIR) / str(user_id) / str(course_title) / str(new_note_name)
+                    
+                    # 如果旧目录存在，重命名目录
+                    if old_dir.exists() and old_dir.is_dir():
+                        try:
+                            # 如果新目录已存在，先删除
+                            if new_dir.exists():
+                                shutil.rmtree(new_dir)
+                            # 重命名目录
+                            shutil.move(str(old_dir), str(new_dir))
+                            print(f"✓ 重命名笔记目录: {old_dir} -> {new_dir}")
+                        except Exception as e:
+                            print(f"✗ 重命名笔记目录失败: {e}")
+                            # 这里可以决定是否回滚数据库操作
+                            # 为了数据一致性，我们继续执行，但记录错误
+                
                 return {"success": True, "message": "笔记名称修改成功"}
         except sqlite3.Error as e:
             print(f"数据库错误: {e}")
             return {"error": f"数据库错误: {e}"}
-
+        
     # 常用链接相关方法
     def add_link_category(self, user_id, category, icon, sort_order=0):
         """
@@ -1027,3 +1064,5 @@ class Database:
             "weekType": schedule_dict['week_type'],
             "times": times
         }
+    
+    
