@@ -88,7 +88,7 @@ PKU-Intelligence--2025/
    访问 `http://localhost:8081`
 
 ## 测试
-### 前端测试(目前实现了对Note.vue 和 Links.vue 的单元测试)
+### 前端测试(目前实现了对Note.vue Links.vue 和 Courses.vue 的单元测试)
 1. 进入前端目录:
    ```bash
    cd frontend
@@ -97,6 +97,10 @@ PKU-Intelligence--2025/
    ```bash
    npm run test
    ```
+3. 测试内容：
+    #### __tests__/Courses.spec.js
+    - 单个课程（index = 83）：rowEmpty[11] == false, colEmpty[6] == false
+    - 多个课程（index = [8, 20]）: rowEmpty[1] == false, rowEmpty[2] == false; colEmpty[1] == false, colEmpty[6] == false
 ### 后端测试
 1. 进入总目录：
     ```bash
