@@ -267,6 +267,9 @@ onMounted(() => {
               <div class="text-xs text-gray-600 truncate">
                 {{ userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)).location }}
               </div>
+              <div class="text-xs text-gray-500 truncate">
+                {{ ['每周', '单周', '双周'][userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)).weekType] }}
+              </div>
             </div>
           </div>
         </template>
