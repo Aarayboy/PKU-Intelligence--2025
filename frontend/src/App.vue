@@ -69,6 +69,7 @@ provide("isLoggedIn", isLoggedIn);
 provide("currentUser", currentUser);
 provide("fileview", fileview);
 provide("filepath", filepath);
+provide("chatView", chatView);
 
 onMounted(() => {
   const savedUser = localStorage.getItem("currentUser");

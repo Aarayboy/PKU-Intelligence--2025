@@ -1,753 +1,368 @@
 <template>
-  <div class="chat-container">
-    <!-- <header class="chat-header">
-      <div class="header-content">
-        <h1 class="header-title">🤖 PKU Intelligence</h1>
-        <p class="header-subtitle">AI 助手</p>
-      </div>
-      <div class="header-badge">在线</div>
-    </header> -->
-    <section ref="chatBox" class="chat-box" aria-label="messages">
-      <div
-        v-for="(msg, idx) in messages"
-        :key="idx"
-        class="message-row"
-        :class="msg.role === 'user' ? 'is-user' : 'is-assistant'"
+  <div class="flex flex-col h-[calc(100vh-72px)] bg-gradient-to-b from-blue-50 to-indigo-100 mt-1">
+    <!-- 返回按钮 -->
+    <div class="px-6 py-3 bg-transparent">
+      <button
+        @click="goBack"
+        class="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-100 rounded-lg transition-all active:scale-95"
+        title="返回"
       >
-        <div class="avatar" :class="msg.role === 'user' ? 'avatar-user' : 'avatar-assistant'">
-          <span v-if="msg.role === 'user'">👤</span>
-          <span v-else>🤖</span>
+        <span class="">←</span>
+        <span class="text-sm font-medium">返回</span>
+      </button>
+    </div>
+
+    <!-- 聊天消息区域 -->
+    <div class="flex-1 overflow-y-auto px-6 py-4 flex flex-col">
+      <div class="max-w-4xl mx-auto w-full flex-1 flex flex-col">
+        <!-- 空状态 -->
+        <div
+          v-if="messages.length === 0"
+          class="flex flex-col items-center justify-center flex-1 text-gray-400"
+        >
+          <div class="text-7xl mb-4">💬</div>
+          <p class="text-lg font-medium">上传文件后开始提问</p>
         </div>
-        <div class="bubble">
-          <div class="bubble-content">{{ msg.content }}</div>
-          <div class="bubble-meta">
-            <span class="role">{{ msg.role === 'user' ? '你' : '助手' }}</span>
-            <span class="dot">•</span>
-            <span class="time">{{ formatTime(msg.ts) }}</span>
+
+        <!-- 消息列表 -->
+        <div v-else class="space-y-4 flex-1 flex flex-col justify-start">
+          <div
+            v-for="(msg, idx) in messages"
+            :key="idx"
+            :class="[
+              'flex gap-3 animate-fade-in',
+              msg.role === 'user' ? 'justify-end' : 'justify-start',
+            ]"
+          >
+            <div v-if="msg.role === 'assistant'" class="flex-shrink-0 text-2xl pt-1">
+              🤖
+            </div>
+            <div
+              :class="[
+                'px-4 py-3 rounded-lg max-w-2xl break-words prose prose-sm',
+                msg.role === 'user'
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-br-none'
+                  : 'bg-white text-gray-800 shadow-sm rounded-bl-none',
+              ]"
+              v-html="renderMarkdown(msg.content)"
+            ></div>
+            <div v-if="msg.role === 'user'" class="flex-shrink-0 text-2xl pt-1">
+              👤
+            </div>
           </div>
         </div>
+        <div ref="messagesEnd"></div>
       </div>
+    </div>
 
-      <div v-if="isThinking" class="message-row is-assistant typing-row">
-        <div class="avatar avatar-assistant">🤖</div>
-        <div class="bubble typing">
-          <span class="dot dot-1"></span>
-          <span class="dot dot-2"></span>
-          <span class="dot dot-3"></span>
-        </div>
-      </div>
+    <!-- 输入区域 -->
+    <div class="bg-white border-t border-gray-200 px-6 py-4 shadow-lg">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex gap-3 items-end mb-2">
+          <!-- 上传按钮 -->
+          <div class="flex items-center gap-2">
+            <input
+              type="file"
+              ref="fileInput"
+              accept=".pdf"
+              @change="handleFileSelectAndUpload"
+              class="hidden"
+            />
+            <button
+              @click="$refs.fileInput.click()"
+              class="p-2.5 bg-white border border-gray-300 rounded-lg hover:border-indigo-500 hover:bg-indigo-50 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              :disabled="isSending"
+              title="上传PDF文件"
+            >
+              📎
+            </button>
+            <span
+              v-if="uploadedFileName"
+              class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded truncate max-w-xs"
+            >
+              {{ uploadedFileName }}
+            </span>
+          </div>
 
-      <!-- 空状态提示 -->
-      <div v-if="messages.length === 0" class="empty-state">
-        <div class="empty-icon">💬</div>
-        <p class="empty-text">开始对话</p>
-        <p class="empty-hint">向我提问有关你的课程、任务或笔记</p>
-      </div>
-    </section>
+          <!-- 输入框 -->
+          <input
+            v-model="input"
+            @keyup.enter="sendMessage"
+            :disabled="!sessionId"
+            placeholder="输入你的问题..."
+            class="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-gray-100 disabled:cursor-not-allowed transition"
+          />
 
-    <footer class="input-area">
-      <div class="input-wrapper">
-        <div class="note-selector-wrapper">
-          <button class="note-selector-btn" @click="toggleNoteSelector" title="选择笔记">
-            📝
-            <span v-if="selectedNote" class="badge">1</span>
+          <!-- 发送按钮 -->
+          <button
+            @click="sendMessage"
+            :disabled="!sessionId || !input.trim() || isSending"
+            class="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg hover:shadow-lg hover:shadow-indigo-400 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-medium"
+          >
+            <span v-if="isSending" class="inline-block animate-spin">⏳</span>
+            <span v-else>发送</span>
           </button>
-          
-          <!-- 笔记选择下拉框 -->
-          <div v-if="showNoteSelector" class="note-dropdown" @click.stop>
-            <div class="dropdown-header">
-              <span>选择笔记</span>
-              <button class="close-btn" @click="showNoteSelector = false">✕</button>
-            </div>
-            
-            <div v-if="selectedNote" class="selected-note">
-              <div class="note-item active">
-                <span class="note-name">{{ selectedNote.title }}</span>
-                <button class="remove-btn" @click="clearSelectedNote">✕</button>
-              </div>
-            </div>
-            
-            <div class="dropdown-content">
-              <div v-if="allNotes.length === 0" class="empty-notes">
-                暂无笔记
-              </div>
-              <div 
-                v-for="note in allNotes" 
-                :key="note.title"
-                class="note-item"
-                :class="{ active: selectedNote?.title === note.title }"
-                @click="selectNote(note)"
-              >
-                <span class="note-name">{{ note.title }}</span>
-                <span class="note-course">{{ note.lessonName }}</span>
-              </div>
-            </div>
-          </div>
         </div>
-        
-        <textarea
-          v-model="input"
-          class="input"
-          rows="1"
-          placeholder="输入你的问题，Enter 发送，Shift+Enter 换行..."
-          @keydown.enter.prevent="onEnter"
-        />
-        <button class="send-btn" :disabled="!canSend || isThinking" @click="sendMessage" title="发送消息 (Enter)">
-          <span v-if="isThinking">⏳</span>
-          <span v-else>📤</span>
-        </button>
+
+        <!-- 提示文字 -->
+        <p v-if="!sessionId" class="text-xs text-gray-500 text-center">
+          💡 请先上传 PDF 文件初始化会话
+        </p>
       </div>
-    </footer>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, inject, computed, nextTick } from "vue";
+import { ref, nextTick, inject } from "vue";
+import MarkdownIt from "markdown-it";
 import api from "@/chatapi/request.js";
 
-const input = ref("");
-const messages = ref([]);
-const isThinking = ref(false);
-const chatBox = ref(null);
 
-const userData = inject("userData");
-const courseNames = computed(() => (userData?.courses || []).map((course) => course.name));
-
-const choseCourse = ref([]);
-const choseNote = ref([]);
-
-// 笔记选择相关
-const showNoteSelector = ref(false);
-const selectedNote = ref(null);
-
-// 获取所有笔记
-const allNotes = computed(() => {
-  if (!userData?.courses) return [];
-  const notes = [];
-  userData.courses.forEach(course => {
-    if (course.myNotes && Array.isArray(course.myNotes)) {
-      course.myNotes.forEach(note => {
-        notes.push({
-          title: note.name,
-          lessonName: course.name
-        });
-      });
-    }
-  });
-  return notes;
+// 初始化 Markdown 渲染器
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  breaks: true,
 });
 
-function toggleNoteSelector() {
-  showNoteSelector.value = !showNoteSelector.value;
+// 输入框和消息数组
+const input = ref("");
+const messages = ref([]);
+const isSending = ref(false);
+const uploadedFileName = ref("");
+const chatView = inject("chatView");
+
+// 会话 ID 管理
+const sessionId = ref(localStorage.getItem("session_id"));
+
+// 文件上传部分
+const fileInput = ref(null);
+const messagesEnd = ref(null);
+
+// 返回上一步
+const goBack = () => {
+  chatView.value = !chatView.value;
+};
+
+// 自动滚动到最新消息
+const scrollToBottom = async () => {
+  await nextTick();
+  messagesEnd.value?.scrollIntoView({ behavior: "smooth" });
+};
+
+// 渲染 Markdown
+const renderMarkdown = (content) => {
+  return md.render(content);
+};
+
+// 处理文件选择
+function handleFileSelect(event) {
+  const file = event.target.files[0];
+  if (file) {
+    uploadedFileName.value = file.name;
+  }
 }
 
-function selectNote(note) {
-  selectedNote.value = note;
-  showNoteSelector.value = false;
+// 处理文件选择并自动上传
+async function handleFileSelectAndUpload(event) {
+  const file = event.target.files[0];
+  if (file) {
+    uploadedFileName.value = file.name;
+    // 自动上传
+    await uploadFile();
+  }
 }
 
-function clearSelectedNote() {
-  selectedNote.value = null;
-}
+// 上传文件并存储会话 ID
+async function uploadFile() {
+  if (!uploadedFileName.value) {
+    alert("请选择一个 PDF 文件");
+    return;
+  }
 
-const sessionId =
-  localStorage.getItem("session_id") ||
-  (() => {
-    const id = Math.random().toString(36).substring(2);
-    localStorage.setItem("session_id", id);
-    return id;
-  })();
-
-const canSend = computed(() => input.value.trim().length > 0);
-
-function formatTime(ts) {
-  if (!ts) return "";
-  const d = new Date(ts);
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${hh}:${mm}`;
-}
-
-function scrollToBottom() {
-  nextTick(() => {
-    if (chatBox.value) {
-      chatBox.value.scrollTop = chatBox.value.scrollHeight;
-    }
-  });
-}
-
-function onEnter(e) {
-  // Shift+Enter 换行；Enter 发送
-  if (e.shiftKey) return; // 默认行为已 prevent
-  sendMessage();
-}
-
-async function sendMessage() {
-  if (!canSend.value || isThinking.value) return;
-
-  const userInput = input.value.trim();
-  input.value = "";
-
-  messages.value.push({ role: "user", content: userInput, ts: Date.now() });
-  isThinking.value = true;
-  scrollToBottom();
-
+  isSending.value = true;
   try {
-    const res = await api.post("/chat", {
-      message: userInput,
-      session_id: sessionId,
-      // 可选上下文：课程名等
-      // courses: selectedNote.value ? [selectedNote.value.lessonName] : [],
-      // notes: selectedNote.value ? [selectedNote.value.title] : [],
-      // userId: userData?.userId || null,
+    const file = fileInput.value.files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("session_id", sessionId.value || "");
+
+    const response = await api.post("/upload_pdf", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
 
-    messages.value.push({ role: "assistant", content: res?.data?.reply ?? "[无响应]", ts: Date.now() });
+    const newSessionId = response.data.session_id;
+    sessionId.value = newSessionId;
+    localStorage.setItem("session_id", newSessionId);
+
+    messages.value.push({
+      role: "assistant",
+      content: response.data.reply || "文件上传成功，请开始提问",
+    });
+
+    uploadedFileName.value = "";
+    await scrollToBottom();
   } catch (err) {
-    messages.value.push({ role: "assistant", content: `后端错误: ${err?.message || err}` , ts: Date.now() });
+    messages.value.push({ role: "assistant", content: "文件上传失败: " + err });
   } finally {
-    isThinking.value = false;
-    scrollToBottom();
+    isSending.value = false;
+  }
+}
+
+// 发送提问
+async function sendMessage() {
+  if (!input.value.trim()) return;
+
+  // 检查是否有 session_id，如果没有提示用户先上传文件
+  if (!sessionId.value) {
+    alert("请先上传 PDF 文件以初始化会话！");
+    return;
+  }
+
+  messages.value.push({ role: "user", content: input.value });
+  const userInput = input.value;
+  input.value = "";
+
+  messages.value.push({ role: "assistant", content: "正在思考..." });
+
+  try {
+    const res = await api.post("/ask_question", {
+      session_id: sessionId.value, // 使用当前内存中的 sessionId
+      message: userInput,
+    });
+
+    messages.value.pop(); // 移除“正在思考...”消息
+    messages.value.push({ role: "assistant", content: res.data.reply });
+  } catch (err) {
+    messages.value.push({ role: "assistant", content: "后端错误: " + err });
   }
 }
 </script>
 
-<style>
-.chat-container {
-  max-width: 900px;
-  margin: 24px auto;
-  height: calc(100vh - 120px);
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg, #ffffff 0%, #f5f7ff 100%);
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
-  overflow: hidden;
+<style scoped>
+
+* {
+  box-sizing: border-box;
 }
 
-/* ===== 顶部标题栏 ===== */
-.chat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-.header-content {
-  flex: 1;
-}
-.header-title {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-.header-subtitle {
-  margin: 2px 0 0 0;
-  font-size: 12px;
-  opacity: 0.9;
-  font-weight: 400;
-}
-.header-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  backdrop-filter: blur(10px);
-}
-.header-badge::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  background: #4ade80;
-  border-radius: 50%;
-  animation: pulse 2s infinite;
-}
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* ===== 聊天消息区 ===== */
-.chat-box {
-  flex: 1;
-  overflow-y: auto;
-  padding: 8px 20px;
-  background: white;
-  position: relative;
-  scroll-behavior: smooth;
-}
-.chat-box::-webkit-scrollbar {
-  width: 8px;
-}
-.chat-box::-webkit-scrollbar-track {
-  background: #f0f0f0;
-  border-radius: 10px;
-}
-.chat-box::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
-  border-radius: 10px;
-}
-.chat-box::-webkit-scrollbar-thumb:hover {
-  background: #999;
-}
-
-.message-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  margin: 16px 0;
-  animation: slideIn 0.3s ease-out;
-}
-@keyframes slideIn {
+@keyframes fade-in {
   from {
     opacity: 0;
     transform: translateY(10px);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-.message-row.is-user { 
-  flex-direction: row-reverse; 
-  justify-content: flex-start;
-}
 
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 18px;
-  flex-shrink: 0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-.avatar-user { 
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-.avatar-assistant { 
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  color: white;
-}
-
-.bubble {
-  max-width: 70%;
-  padding: 12px 14px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  position: relative;
-  animation: bubbleIn 0.3s ease-out;
-}
-@keyframes bubbleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.8);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-.is-user .bubble {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-}
-.is-assistant .bubble {
-  background: #f0f4ff;
-  color: #111827;
-  border-bottom-left-radius: 4px;
-  border: 1px solid #e0e7ff;
-}
-.bubble-content {
-  white-space: pre-wrap;
-  line-height: 1.6;
-  font-size: 14px;
-  word-wrap: break-word;
-}
-.bubble-meta {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 6px;
-  font-size: 11px;
-}
-.is-user .bubble-meta {
-  opacity: 0.8;
-  color: rgba(255, 255, 255, 0.9);
-}
-.is-assistant .bubble-meta {
-  color: #6b7280;
-}
-.bubble-meta .dot { 
-  opacity: 0.6;
-}
-
-/* ===== 打字指示器 ===== */
-.typing {
-  display: inline-flex;
-  gap: 4px;
-  padding: 10px 14px;
-}
-.typing .dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #667eea;
-  animation: blink 1.4s infinite;
-}
-.typing .dot-1 { animation-delay: 0s; }
-.typing .dot-2 { animation-delay: 0.2s; }
-.typing .dot-3 { animation-delay: 0.4s; }
-@keyframes blink {
-  0%, 100% { 
-    opacity: 0.3;
-    transform: translateY(0);
-  }
-  50% { 
-    opacity: 1;
-    transform: translateY(-8px);
-  }
-}
-
-/* ===== 空状态 ===== */
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  color: #9ca3af;
-}
-.empty-icon {
-  font-size: 48px;
-  margin-bottom: 12px;
-  opacity: 0.6;
-}
-.empty-text {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 600;
-  color: #6b7280;
-  margin-bottom: 6px;
-}
-.empty-hint {
-  margin: 0;
-  font-size: 13px;
-  color: #a0aec0;
-}
-
-/* ===== 输入区 ===== */
-.input-area {
-  padding: 16px 20px;
-  background: linear-gradient(180deg, #ffffff 0%, #f5f7ff 100%);
-  border-top: 2px solid #e0e7ff;
-}
-.input-wrapper {
-  display: flex;
-  gap: 10px;
-  align-items: flex-end;
-  position: relative;
-}
-
-/* 笔记选择器 */
-.note-selector-wrapper {
-  position: relative;
-  flex-shrink: 0;
-}
-.note-selector-btn {
-  width: 44px;
-  height: 44px;
-  border: 2px solid #e0e7ff;
-  border-radius: 12px;
-  background: white;
-  color: #667eea;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  position: relative;
-}
-.note-selector-btn:hover {
-  border-color: #667eea;
-  background: #fafbff;
-}
-.note-selector-btn .badge {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 18px;
-  height: 18px;
-  background: #f5576c;
-  color: white;
-  border-radius: 50%;
-  font-size: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-}
-
-.note-dropdown {
-  position: absolute;
-  bottom: 100%;
-  left: 0;
-  margin-bottom: 8px;
-  width: 300px;
-  max-height: 400px;
-  background: white;
-  border: 2px solid #e0e7ff;
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-  z-index: 100;
-  display: flex;
-  flex-direction: column;
-  animation: dropdownSlide 0.2s ease-out;
-}
-@keyframes dropdownSlide {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-.dropdown-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  border-bottom: 1px solid #e0e7ff;
-  font-weight: 600;
-  font-size: 13px;
-  color: #374151;
-}
-.close-btn {
-  width: 24px;
-  height: 24px;
-  border: none;
-  background: transparent;
-  color: #9ca3af;
-  cursor: pointer;
-  border-radius: 6px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-}
-.close-btn:hover {
-  background: #f3f4f6;
-  color: #374151;
+.animate-fade-in {
+  animation: fade-in 0.3s ease;
 }
 
-.selected-note {
-  padding: 8px 10px;
-  border-bottom: 1px solid #e0e7ff;
-  background: #fafbff;
+/* Markdown 样式 */
+:deep(h1) {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
-.dropdown-content {
-  max-height: 300px;
-  overflow-y: auto;
-  padding: 4px;
-}
-.dropdown-content::-webkit-scrollbar {
-  width: 6px;
-}
-.dropdown-content::-webkit-scrollbar-thumb {
-  background: #d0d0d0;
-  border-radius: 10px;
+:deep(h2) {
+  font-size: 1.125rem;
+  font-weight: bold;
+  margin-top: 0.625rem;
+  margin-bottom: 0.375rem;
 }
 
-.note-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 12px;
-  margin: 2px 0;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  gap: 8px;
-}
-.note-item:hover {
-  background: #f0f4ff;
-}
-.note-item.active {
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
-  border: 1px solid #c7d2fe;
-}
-.note-name {
-  flex: 1;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1f2937;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.note-course {
-  font-size: 11px;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 2px 8px;
-  border-radius: 6px;
-  white-space: nowrap;
-}
-.remove-btn {
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  flex-shrink: 0;
-}
-.remove-btn:hover {
-  background: #ef4444;
-  color: white;
+:deep(h3) {
+  font-size: 1rem;
+  font-weight: bold;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
 }
 
-.empty-notes {
-  padding: 20px;
-  text-align: center;
-  color: #9ca3af;
-  font-size: 13px;
+:deep(p) {
+  margin-bottom: 0.5rem;
 }
 
-.input-area .input {
-  flex: 1;
-  resize: none;
-  border: 2px solid #e0e7ff;
-  border-radius: 12px;
-  padding: 12px 14px;
-  min-height: 44px;
-  max-height: 120px;
-  line-height: 1.6;
-  font-size: 14px;
-  font-family: inherit;
-  outline: none;
-  background: white;
-  transition: all 0.2s ease;
-}
-.input-area .input:focus { 
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-  background: #fafbff;
-}
-.input-area .input::placeholder {
-  color: #a0aec0;
+:deep(ul),
+:deep(ol) {
+  margin-bottom: 0.5rem;
+  margin-left: 1rem;
 }
 
-.send-btn {
-  width: 44px;
-  height: 44px;
+:deep(li) {
+  margin-bottom: 0.25rem;
+}
+
+:deep(code) {
+  background-color: #e5e7eb;
+  padding: 0.375rem 0.375rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-family: monospace;
+}
+
+:deep(pre) {
+  background-color: #111827;
+  color: #f3f4f6;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin-bottom: 0.5rem;
+}
+
+:deep(pre code) {
+  background-color: transparent;
   padding: 0;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+:deep(blockquote) {
+  border-left: 4px solid #d1d5db;
+  padding-left: 0.75rem;
+  font-style: italic;
+  color: #4b5563;
+  margin: 0.5rem 0;
+}
+
+:deep(a) {
+  color: #3b82f6;
+}
+
+:deep(a:hover) {
+  text-decoration: underline;
+}
+
+:deep(table) {
+  border-collapse: collapse;
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+
+:deep(th),
+:deep(td) {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem;
+}
+
+:deep(th) {
+  background-color: #f3f4f6;
+}
+
+/* 用户消息中的 markdown 样式 */
+.bg-gradient-to-r :deep(code) {
+  background-color: rgba(255, 255, 255, 0.3);
   color: white;
-  font-size: 18px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  flex-shrink: 0;
-}
-.send-btn:hover:not([disabled]) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
-}
-.send-btn:active:not([disabled]) {
-  transform: translateY(0);
-}
-.send-btn[disabled] { 
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
 }
 
-/* ===== 响应式适配 ===== */
-@media (max-width: 768px) {
-  .chat-container {
-    height: 100vh;
-    margin: 0;
-    border-radius: 0;
-  }
-  .header-title {
-    font-size: 18px;
-  }
-  .bubble {
-    max-width: 85%;
-  }
+.bg-gradient-to-r :deep(a) {
+  color: #dbeafe;
 }
 
-/* ===== 深色模式 ===== */
-@media (prefers-color-scheme: dark) {
-  .chat-container {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  }
-  .chat-box {
-    background: #1e293b;
-  }
-  .chat-box::-webkit-scrollbar-track {
-    background: #334155;
-  }
-  .chat-box::-webkit-scrollbar-thumb {
-    background: #64748b;
-  }
-  .is-assistant .bubble {
-    background: #334155;
-    color: #e2e8f0;
-    border-color: #475569;
-  }
-  .is-assistant .bubble-meta {
-    color: #94a3b8;
-  }
-  .input-area {
-    background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-    border-color: #334155;
-  }
-  .input-area .input {
-    background: #1e293b;
-    color: #e2e8f0;
-    border-color: #334155;
-  }
-  .input-area .input:focus {
-    background: #1e293b;
-    border-color: #667eea;
-  }
-  .input-area .input::placeholder {
-    color: #64748b;
-  }
-  .empty-text {
-    color: #94a3b8;
-  }
-  .empty-hint {
-    color: #64748b;
-  }
+.bg-gradient-to-r :deep(a:hover) {
+  color: white;
 }
 </style>

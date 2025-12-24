@@ -45,3 +45,5 @@ desktop.ini
 *.tsbuildinfo
 
 .env
+
+AI_answer_final_text/*
