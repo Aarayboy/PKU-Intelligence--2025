@@ -1,5 +1,6 @@
 import os
 import re
+import time
 from urllib.parse import urljoin, urlparse
 from bs4 import BeautifulSoup
 from spider import login

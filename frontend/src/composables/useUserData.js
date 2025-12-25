@@ -145,15 +145,16 @@ class CourseTable {
 
   getCoursesByWeekday(targetWeekday) {
     if (![1, 2, 3, 4, 5, 6, 7].includes(targetWeekday)) return [];
-    
-    const dayCourses = [];
-    const startIndex = (targetWeekday - 1) * 12;
-    const endIndex = targetWeekday * 12 - 1;
 
-    for (let index = startIndex; index <= endIndex; index++) {
+    const dayCourses = [];
+    const periods = 12;
+    const weekdayIndex = targetWeekday - 1;
+
+    for (let period = 1; period <= periods; period++) {
+      const index = (period - 1) * 7 + weekdayIndex;
       const course = this.getCourseByIndex(index);
       if (course) {
-        dayCourses.push({ ...course, period: (index % 12) + 1, index });
+        dayCourses.push({ ...course, period, index });
       }
     }
     return dayCourses;
@@ -271,7 +272,7 @@ export function generateMockSchedule() {
       teacher: '孙老师',
       location: '二教406',
       weekType: 0,
-      times: [14, 15, 40, 41]
+      times: [15, 22, 31, 38]
     },
     {
       id: 2,
@@ -279,7 +280,7 @@ export function generateMockSchedule() {
       teacher: '李老师',
       location: '二教202',
       weekType: 1,
-      times: [24, 25, 38, 39]
+      times: [17, 24, 43, 50]
     },
     {
       id: 3,
@@ -287,7 +288,7 @@ export function generateMockSchedule() {
       teacher: '王老师',
       location: '理教301',
       weekType: 2,
-      times: [12, 13, 60, 61]
+      times: [30, 37]
     }
   ];
 }

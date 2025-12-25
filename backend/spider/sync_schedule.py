@@ -23,6 +23,7 @@ PKU_OAUTH_URL = (
 
 # 初始化全局 driver（你之前就是这么做的）
 options = Options()
+options.add_argument('--headless')
 options.add_argument("--no-sandbox")
 options.add_argument("--disable-dev-shm-usage")
 options.add_argument("--disable-gpu")
@@ -54,12 +55,11 @@ def fetch_course_table_html(username: str, password: str) -> str | None:
     """
 
     options = Options()
+    options.add_argument('--headless')
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("--disable-gpu")
     options.add_argument("log-level=3")
-    # ⚠️ 不要 headless
-    # options.add_argument("--headless")
 
     driver = webdriver.Chrome(options=options)
 
@@ -143,7 +143,7 @@ def fetch_course_table_html(username: str, password: str) -> str | None:
 
     finally:
         # 用完再关，方便你调试时观察页面
-        # driver.quit()
+        driver.quit()
         pass
 
 def parse_course_table(html: str) -> List[List[str]]:

@@ -10,6 +10,10 @@ import spider.login as login
 import spider.spider as spider
 import spider.ddl_LLM as ddl_LLM
 from database import storage
+import shutil
+import requests
+from concurrent.futures import ThreadPoolExecutor
+EXECUTOR = ThreadPoolExecutor(max_workers=4)
 
 dotenv.load_dotenv()
 LocalHost = os.getenv("localhost") or ""
@@ -322,182 +326,188 @@ def download_note_file():
 
 @app.route("/cloud", methods=["POST"])
 def cloud_status():
-    global _courses
+    global _courses, _session
 
-    data = None
-    if request.is_json:
-        data = request.get_json()
-    else:
-        data = request.form or request.values
+    data = request.get_json() if request.is_json else (request.form or request.values)
 
     userId = data.get("userId")
     xuehao = data.get("xuehao")
     password = data.get("password")
-    course = data.get("course")  # currently unused
+    course = data.get("course")  # None/"" 表示取课程列表；否则是课程ID
     print(f"UserId:{userId},xuehao:{xuehao}, password:{password}, course:{course}")
 
     if not userId or not xuehao or not password:
-        return (
-            jsonify({"success": False, "error": "userId, xuehao和password均为必填"}),
-            400,
-        )
-    
-    # 先获取课程列表，course为空即为需要爬取所有课程名字
-    if course == None or course == "":
-        # =======================
-        # 同步课表（新增）
-        # =======================
-        try:
-            print("开始同步课表...")
+        return jsonify({"success": False, "error": "userId, xuehao和password均为必填"}), 400
 
-            # 1. 爬取课表
-            course_table = sync_schedule(xuehao, password)
+    # -----------------------------
+    # A) course 为空：并行 1)同步课表 2)登录+获取课程列表
+    # -----------------------------
+    if course is None or course == "":
+        def _job_sync_schedule_and_write_db():
+            try:
+                print("开始同步课表...")
+                course_table = sync_schedule(xuehao, password)
+                storage.update_course_table(userId, course_table)
+                print("✅ 课表同步成功")
+                return course_table
+            except Exception as e:
+                print(f"课表同步失败: {e}")
+                return None
 
-            # 2 写入数据库（覆盖式更新）
-            storage.update_course_table(userId, course_table)
+        def _job_get_courses():
+            session = get_session(xuehao, password)  # 会写入/复用全局 _session
+            courses_ = spider.get_current_semester_course_list(session)
+            return courses_
 
-            # 3 终端输出课表信息
-            print("✅ 课表同步成功，课程如下：")
-            print({"courseTable": course_table})
-        except Exception as e:
-            print(f"课表同步失败: {e}")
-        session = get_session(xuehao, password)
-        courses = spider.get_current_semester_course_list(session)
+        fut_table = EXECUTOR.submit(_job_sync_schedule_and_write_db)
+        fut_courses = EXECUTOR.submit(_job_get_courses)
+
+        # 等课程列表（这是必须返回给前端的）
+        courses = fut_courses.result()
         _courses = courses
-        return (
-            jsonify(
-                {
-                    "success": True,
-                    "message": "课程为空，准备爬取所有课程",
-                    "courses": courses,
-                }
-            ),
-            200,
-        )
-    # course不为空，爬取指定课程，返回的course是课程ID
-    else:
-        # 先下载
-        downloaded_files = spider.download_handouts_for_course(
-            _session,
+
+        # 课表同步结果你目前没有返回给前端（保持你原来的返回结构不变）
+        _ = fut_table.result()
+
+        return jsonify({"success": True, "message": "课程为空，准备爬取所有课程", "courses": courses}), 200
+
+    # -----------------------------
+    # B) course 不为空：并行 1)下载课程文件 2)爬取+LLM清洗DDL
+    # -----------------------------
+    # 保证 course 能用于列表下标
+    try:
+        course_idx = int(course)
+    except Exception:
+        return jsonify({"success": False, "error": f"course 参数非法: {course}"}), 400
+
+    # 注意：requests.Session 不保证线程安全
+    # 所以这里复制 cookies，给两个任务各用一个 session，避免并发踩踏
+    if _session is None:
+        # 按你原逻辑：如果没 session，需要先登录一次
+        _session = get_session(xuehao, password)
+
+    dl_session = requests.Session()
+    ddl_session = requests.Session()
+    # 复制 cookies（通常足够维持已登录态）
+    dl_session.cookies = requests.cookies.cookiejar_from_dict(
+        requests.utils.dict_from_cookiejar(_session.cookies)
+    )
+    ddl_session.cookies = requests.cookies.cookiejar_from_dict(
+        requests.utils.dict_from_cookiejar(_session.cookies)
+    )
+
+    def _job_download_files():
+        return spider.download_handouts_for_course(
+            dl_session,
             course_id=course,
             section_names=["课程讲义", "课程文件", "教学内容"],
             max_files=3,
             download_root="uploads",
-        )  # section_names 想加啥加啥
+        )
 
-        # 使用 storage.add_course 创建课程
-        course_title = _courses[course - 1]["name"]
-        course_tags = ["课程文件", "教学内容"]
-        course = storage.add_course(course_title, course_tags, userId)
-        if not course:
-            print(f"课程 '{course_title}' 可能已存在")
+    def _job_fetch_and_clean_ddls():
+        return ddl_LLM.build_deadline_payload_with_llm(ddl_session, user_id=userId)
 
-        # 我看不懂下面这段在干嘛
-        results = []
-        for info in downloaded_files:
-            # 提取文件名和笔记标题
-            file_path = info.get("path")
-            note_title = info.get("name") or ""
+    fut_download = EXECUTOR.submit(_job_download_files)
+    fut_ddl = EXECUTOR.submit(_job_fetch_and_clean_ddls)
 
-            # 创建笔记目录：uploads/userId/course_title/note_title/
-            note_dir = BASE_STORAGE_DIR / str(userId) / course_title / note_title
-            note_dir.mkdir(parents=True, exist_ok=True)
+    downloaded_files = fut_download.result()  # list[str] 本地路径
+    payload = fut_ddl.result()                # {"UserId":..., "deadlines":[...]}
 
-            # 复制文件到笔记目录
-            file_name = os.path.basename(file_path)
-            dest_path = note_dir / file_name
-            import shutil
+    # --- 1) 写入课程 & 笔记（保持你原来的逻辑，只修正“downloaded_files 是 str”这个事实） ---
+    if not _courses or course_idx < 1 or course_idx > len(_courses):
+        return jsonify({"success": False, "error": "课程列表缺失或 course 越界，请先 course 为空调用一次获取课程列表"}), 400
 
+    course_title = _courses[course_idx - 1]["name"]
+    course_tags = ["课程文件", "教学内容"]
+    created_course = storage.add_course(course_title, course_tags, userId)
+    if not created_course:
+        print(f"课程 '{course_title}' 可能已存在")
+
+    results = []
+    for file_path in downloaded_files:
+        # downloaded_files 的元素是 str（本地路径）
+        file_path = str(file_path)
+        file_name = os.path.basename(file_path)
+
+        # 原来用 info.get("name") 做 note_title，现在没有了；用文件名（去扩展名）替代
+        note_title = Path(file_name).stem or "Untitled"
+
+        note_dir = BASE_STORAGE_DIR / str(userId) / course_title / note_title
+        note_dir.mkdir(parents=True, exist_ok=True)
+
+        dest_path = note_dir / file_name
+        try:
             shutil.copy2(file_path, dest_path)
+        except Exception as e:
+            print(f"复制文件失败 {file_path} -> {dest_path}: {e}")
 
-            # 使用 storage.add_note 创建笔记
-            # 参数对应数据库字段：
-            # - title -> notes.name (笔记标题)
-            # - lessonName -> courses.title (通过course_id关联)
-            # - files -> notes.file (文件名)
-            note = storage.add_note(
-                title=note_title,  # 对应 notes.name
-                lessonName=course_title,  # 对应 courses.title
-                tags=["软工"],  # 笔记标签
-                files=[file_name],  # 对应 notes.file (存储文件名)
-                user_id=userId,
-            )
-
-            if note:
-                results.append(
-                    {
-                        "note_name": note_title,  # 对应 notes.name
-                        "file_name": file_name,  # 对应 notes.file
-                        "course_title": course_title,  # 对应 courses.title
-                        "status": "success",
-                        "note_id": note.get("id"),
-                    }
-                )
-                print(f"✓ 成功创建笔记: {note_title}, 文件: {file_name}")
-            else:
-                results.append(
-                    {
-                        "note_name": note_title,
-                        "file_name": file_name,
-                        "course_title": course_title,
-                        "status": "failed",
-                    }
-                )
-                print(f"✗ 创建笔记失败: {note_title}")
-
-        # 点一次🌧，顺便把任务列表（DDL）也同步一下
-        payload = ddl_LLM.build_deadline_payload_with_llm(
-            _session,
-            user_id=userId
+        note = storage.add_note(
+            title=note_title,
+            lessonName=course_title,
+            tags=["软工"],
+            files=[file_name],
+            user_id=userId,
         )
 
-        deadlines = payload.get("deadlines", [])   # LLM 解析出的 DDL 列表
-        created_tasks = []                         # 实际写入 tasks 表的记录
-
-        for item in deadlines:
-            # 从每一条 deadline 中取出字段
-            name = item.get("name")
-            deadline_str = item.get("deadline")
-            message = item.get("message")
-            status = item.get("status")   # LLM 现在用 0/1 表示紧急/不紧急
-
-            if deadline_str is None:
-                deadline_str = "None"
-
-            # 数据库存的是字符串，这里做个简单映射
-            if isinstance(status, int):
-                status_str = "0" if status == 0 else "1"
-            else:
-                status_str = status or "1"
-
-            new_task = storage.add_task(userId, name, message, deadline_str, status_str)
-
-            if new_task:
-                created_tasks.append(new_task)
-            else:
-                print(f"创建任务失败: {name} - {deadline_str}")
-
-        # 最后合并返回
-        return (
-            jsonify(
+        if note:
+            results.append(
                 {
-                    "success": True,
-                    "message": f"准备爬取课程: {course}",
-                    "courses": [],        # 保留原来返回的字段
-                    "notes": results,     # 本次创建的笔记信息
-                    "deadlines": deadlines,   # LLM 解析出来的 DDL 原始数据
-                    "tasks": created_tasks,   # 实际写入数据库的任务记录
+                    "note_name": note_title,
+                    "file_name": file_name,
+                    "course_title": course_title,
+                    "status": "success",
+                    "note_id": note.get("id"),
                 }
-            ),
-            200,
-        )
-        # # 最后返回信息
-        # return (
-        #     jsonify(
-        #         {"success": True, "message": f"准备爬取课程: {course}", "courses": []}
-        #     ),
-        #     200,
-        # )
+            )
+            print(f"✓ 成功创建笔记: {note_title}, 文件: {file_name}")
+        else:
+            results.append(
+                {
+                    "note_name": note_title,
+                    "file_name": file_name,
+                    "course_title": course_title,
+                    "status": "failed",
+                }
+            )
+            print(f"✗ 创建笔记失败: {note_title}")
+
+    # --- 2) 写入 DDL tasks（保持你现在“可跑”的处理方式；deadline None -> 'None'） ---
+    deadlines = payload.get("deadlines", [])
+    created_tasks = []
+
+    for item in deadlines:
+        name = item.get("name")
+        deadline_str = item.get("deadline")
+        message = item.get("message", "")
+        status = item.get("status", 1)  # 0/1
+
+        if deadline_str is None:
+            deadline_str = "None"  # 你当前数据库 NOT NULL 的“临时兜底”
+
+        # 数据库存字符串：0/1
+        if isinstance(status, int):
+            status_str = "0" if status == 0 else "1"
+        else:
+            status_str = status or "1"
+
+        new_task = storage.add_task(userId, name, message, deadline_str, status_str)
+
+        if new_task:
+            created_tasks.append(new_task)
+        else:
+            print(f"创建任务失败: {name} - {deadline_str}")
+
+    return jsonify(
+        {
+            "success": True,
+            "message": f"准备爬取课程: {course_idx}",
+            "courses": [],
+            "notes": results,
+            "deadlines": deadlines,
+            "tasks": created_tasks,
+        }
+    ), 200
 
 
 

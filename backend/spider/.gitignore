@@ -16,3 +16,5 @@ downloads/
 # --- Temporary or test files ---
 *.tmp
 *.bak
+
+*.env

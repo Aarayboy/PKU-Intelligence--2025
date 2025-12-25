@@ -73,10 +73,15 @@ const toggleDeleteMode = () => {
   deleteMode.value = !deleteMode.value;
 };
 
+const computeIndex = (dayIdx, period) => {
+  return (period - 1) * 7 + dayIdx;
+};
+
 const rowEmpty = computed(() => {
   return Array.from({ length: 12 }, (_, p) => {
+    const period = p + 1;
     for (let dayIdx = 0; dayIdx < weekdays.length; dayIdx++) {
-      if (userData.courseTable.getCourseByIndex(dayIdx * 12 + p)) {
+      if (userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period))) {
         return false;
       }
     }
@@ -87,7 +92,8 @@ const rowEmpty = computed(() => {
 const colEmpty = computed(() => {
   return weekdays.map((_, dayIdx) => {
     for (let p = 0; p < 12; p++) {
-      if (userData.courseTable.getCourseByIndex(dayIdx * 12 + p)) {
+      const period = p + 1;
+      if (userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period))) {
         return false;
       }
     }
@@ -98,7 +104,7 @@ const colEmpty = computed(() => {
 const gridTemplate = computed(() => {
   const firstCol = 'minmax(100px, max-content)';
   const dayCols = weekdays.map((_, i) =>
-    colEmpty.value[i] ? 'minmax(36px, max-content)' : 'minmax(100px, max-content)'
+    colEmpty.value[i] ? 'minmax(36px, max-content)' : 'minmax(200px, max-content)'
   );
   return [firstCol, ...dayCols].join(' ');
 });
@@ -120,7 +126,7 @@ const submitAdd = async () => {
   // 把 dayIdx(0..6) 和 period(1..12) 转换为 index(0..83)
   const times = [];
   selectedPeriods.forEach(p => {
-    const index = form.dayIdx * 12 + (p - 1);
+    const index = computeIndex(form.dayIdx, p);
     times.push(index);
   });
 
@@ -227,7 +233,7 @@ onMounted(() => {
         <template v-for="period in 12" :key="'row-'+period">
           <div 
             class="bg-gray-100 p-2 font-medium border border-black flex items-center justify-center"
-            :class="rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[100px]'"
+            :class="rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[200px]'"
           >
             第{{ period }}节
           </div>
@@ -237,29 +243,32 @@ onMounted(() => {
             :key="dayIdx + '-' + period"
             :class="[
               'col-span-1 p-1 border border-black flex items-center justify-center overflow-hidden',
-              rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[100px]'
+              rowEmpty[period - 1] ? 'min-h-[36px]' : 'min-h-[200px]'
             ]"
           >
             <div 
-              v-if="userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1))"
+              v-if="userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period))"
               class="p-2 rounded-md relative w-full h-full box-border flex flex-col items-center justify-center text-center"
               :style="{ 
-                backgroundColor: getCourseColor(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)))
+                backgroundColor: getCourseColor(userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)))
               }"
             >
               <button
                 v-if="deleteMode"
                 class="absolute top-1 right-1 text-xs bg-red-500 text-white rounded px-1"
-                @click.stop="onRemoveCourse(userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).id)"
+                @click.stop="onRemoveCourse(userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)).id)"
               >删除</button>
               <div class="font-medium text-sm truncate">
-                {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).name }}
+                {{ userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)).name }}
               </div>
               <div class="text-xs text-gray-600 truncate">
-                {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).teacher }}
+                {{ userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)).teacher }}
               </div>
               <div class="text-xs text-gray-600 truncate">
-                {{ userData.courseTable.getCourseByIndex(dayIdx * 12 + (period - 1)).location }}
+                {{ userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)).location }}
+              </div>
+              <div class="text-xs text-gray-500 truncate">
+                {{ ['每周', '单周', '双周'][userData.courseTable.getCourseByIndex(computeIndex(dayIdx, period)).weekType] }}
               </div>
             </div>
           </div>

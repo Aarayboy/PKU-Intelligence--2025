@@ -7,17 +7,17 @@
       你可以点击下方按钮进入 AI 聊天界面。
     </p>
 
-    <button class="btn" @click="() => {isHome=false}">进入 AI 对话</button>
+    <button class="btn" @click="() => { isHome = false }">进入 AI 对话</button>
   </div>
-    <div v-if="!isHome">
-      <ChatView />
-    </div>
+  <div v-if="!isHome">
+    <ChatView />
+  </div>
 </template>
 
 <script setup>
-  import { ref } from "vue";
-  import ChatView from "./ChatView.vue";
-  const isHome = ref(true);
+import { ref } from "vue";
+import ChatView from "./ChatView.vue";
+const isHome = ref(true);
 </script>
 
 <style>
